@@ -128,7 +128,7 @@ they enforce.
 
 ## 7. Build the model-driven app + web resource
 
-Create a model-driven app **Flare** and add the six tables:
+Create a model-driven app **Ember** and add the six tables:
 
 - **Configuration** area: Review Standards, Review Rules.
 - **Results** area: Review Runs → Flow Reviews → Findings; a Flow Inventory list.

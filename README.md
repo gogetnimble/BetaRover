@@ -1,4 +1,4 @@
-# Flare
+# Ember
 
 A solution that **crawls a Dynamics 365 / Power Platform tenant for Power Automate
 cloud flows and runs an automated code review** against a delivery standard you
@@ -24,7 +24,7 @@ any organisation's standard.
                     │    3. For each flow ► call Review Engine (custom connector)                       │
                     │    4. Write Flow Review + Findings                                                │
                     │                                                                                   │
-                    │  Model-driven app: "Flare"                                                        │
+                    │  Model-driven app: "Ember"                                                        │
                     │    • Review Standards / Review Rules  (you configure the criteria here)           │
                     │    • Flow Inventory · Review Runs · Flow Reviews · Findings  (results)            │
                     └───────────────────────────────────────────────┬───────────────────────────────────┘

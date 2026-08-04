@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Provision the six Flare tables into a Dataverse environment.
+ * Provision the six Ember tables into a Dataverse environment.
  *
  * The importable solution (../package) carries the publisher, the global choices,
  * and the web resource. Hand-authoring import-valid table + form + view XML is

@@ -86,6 +86,27 @@ ruleset ────────────────────────
 OpenAPI definition exposing the engine's `POST /review` operation to Power
 Automate, so the flow calls the engine as a first-class action.
 
+### 5. Web resource UI (`webresource/`)
+
+A single self-contained HTML web resource (`br_flowreview_app.html`) surfaced
+full-page in the model-driven app. Three tabs — **Tenant Dashboard**, **Flow
+Review**, **Standard & Rules** — all reading/writing the `br_*` tables via
+`Xrm.WebApi`. It ships with a **sample-data preview mode** (used automatically
+when opened outside Dataverse) so the UI can be reviewed without a tenant.
+
+Two user actions write data: **New rule** creates a `br_reviewrule` row, and
+**Run review now** creates an on-demand `br_reviewrun` (which triggers the
+On-Demand flow, below). Full detail in
+[`../webresource/README.md`](../webresource/README.md).
+
+### 6. On-demand review (`flows/on-demand-review/`)
+
+The single-flow counterpart to the nightly crawl. A Dataverse row-added trigger
+on `br_reviewrun` (source `ondemand`) reviews one flow immediately when a user
+clicks **Run review now**, reusing the crawl's review body (ideally a shared
+child flow). This is why "click a flow to review" and "run nightly" are one code
+path, not two.
+
 ## Data flow, end to end
 
 ```

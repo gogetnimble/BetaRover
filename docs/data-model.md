@@ -34,7 +34,11 @@ One row per discovered flow, keyed on `br_flowid` (the `workflowid` GUID).
 
 ### Review Run (`br_reviewrun`)
 One crawl execution. Rolls up `br_flowsscanned`, `br_findingscount`, and
-`br_averagescore`.
+`br_averagescore`. `br_triggersource` distinguishes the nightly `schedule` run
+from an `ondemand` run; on-demand runs also carry `br_targetflowid` (the single
+`workflowid` to review). Creating an `ondemand` row is what the web resource's
+**Run review now** button does — it is the trigger for the On-Demand flow
+([`flows/on-demand-review`](../flows/on-demand-review/README.md)).
 
 ### Flow Review (`br_flowreview`)
 The review of one flow within one run. Carries the per-flow `br_score` (0–100)

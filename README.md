@@ -46,11 +46,13 @@ reasoning behind the low-code-orchestration / pro-code-engine split.
 | Path | What it is |
 |------|------------|
 | `engine/` | The review engine — TypeScript, fully unit-tested. The deterministic rules + AI adapter. Deployable as an Azure Function. |
+| `webresource/` | The model-driven app UI — a single self-contained HTML web resource (dashboard, per-flow review, add-rule). Wired to the Dataverse Web API, with a sample-data preview mode. |
 | `solution/schema/tables.json` | Deployable specification of the six Dataverse tables. |
 | `solution/seed/default-ruleset.json` | Seed rule records encoding the sample standard (generated from the engine). |
-| `flows/crawl-orchestrator/` | The orchestration cloud flow: crawl → inventory → review → persist. |
-| `connector/` | Custom connector (OpenAPI) the flow uses to call the engine. |
-| `docs/` | Architecture, data model, the formalised standard, the rule catalog, deployment. |
+| `flows/crawl-orchestrator/` | The nightly orchestration cloud flow: crawl → inventory → review → persist. |
+| `flows/on-demand-review/` | The single-flow review flow behind the web resource's **Run review now** button. |
+| `connector/` | Custom connector (OpenAPI) the flows use to call the engine. |
+| `docs/` | Architecture, data model, the formalised standard, the rule catalog, setup & deployment. |
 
 ## The engine at a glance
 
@@ -79,8 +81,14 @@ npm run emit-seed  # regenerate solution/seed/default-ruleset.json from code
 
 ## Status
 
-This repository is the **foundation**: a tested engine, the data model, the
-formalised standard as configurable rules, and the orchestration/connector
-contracts. The Dataverse tables and cloud flow are specified as deployable
-artifacts (the sandbox that produced this has no `pac`/`dotnet`), ready to be
-imported and wired up. See [`docs/deployment.md`](docs/deployment.md).
+This repository carries the solution end to end: a tested **engine**, the
+**data model**, the formalised **standard** as configurable rules, the
+orchestration/connector contracts, the **nightly** and **on-demand** flow specs,
+and the **web resource UI** (real, self-contained HTML/JS — dashboard, per-flow
+review, and add-a-rule authoring, wired to the Dataverse Web API with a
+sample-data preview mode).
+
+The Dataverse tables and cloud flows are specified as deployable artifacts (the
+sandbox that produced this has no `pac`/`dotnet`); the engine and web resource
+are ready-to-deploy code. Stand it all up with
+[`docs/deployment.md`](docs/deployment.md).

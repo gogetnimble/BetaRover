@@ -77,7 +77,9 @@
         { "schemaName": "br_flowsscanned", "type": "WholeNumber" },
         { "schemaName": "br_findingscount", "type": "WholeNumber" },
         { "schemaName": "br_averagescore", "type": "Decimal", "precision": 2 },
-        { "schemaName": "br_triggeredby", "type": "Text", "maxLength": 200 }
+        { "schemaName": "br_triggeredby", "type": "Text", "maxLength": 200 },
+        { "schemaName": "br_triggersource", "type": "Choice", "options": ["schedule", "ondemand"], "default": "schedule", "description": "How the run was started. 'ondemand' rows are created by the web resource's Run review now button." },
+        { "schemaName": "br_targetflowid", "type": "Text", "maxLength": 50, "description": "For on-demand runs, the single workflowid to review. Empty on scheduled (all-flow) runs." }
       ]
     },
     {

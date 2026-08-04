@@ -1,0 +1,27 @@
+{
+  "name": "@betarover/flow-review-engine",
+  "version": "0.1.0",
+  "description": "Deterministic + AI hybrid code-review engine for Power Automate cloud flows.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "emit-seed": "npm run build && node scripts/emit-seed.mjs"
+  },
+  "keywords": [
+    "power-automate",
+    "dataverse",
+    "code-review",
+    "dynamics365"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_office365": { "connection": { "connectionReferenceLogicalName": "personal_outlook" } }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "triggers": {
+        "manual": { "type": "Request", "inputs": {} }
+      },
+      "actions": {
+        "List_all_contacts": {
+          "type": "OpenApiConnection",
+          "runAfter": {},
+          "inputs": {
+            "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords" },
+            "parameters": { "entityName": "contacts", "$filter": "statecode eq 0" }
+          }
+        },
+        "Call_prod_api": {
+          "type": "Http",
+          "runAfter": { "List_all_contacts": ["Succeeded"] },
+          "inputs": {
+            "method": "GET",
+            "uri": "https://cma-prod.crm3.dynamics.com/api/data/v9.2/contacts",
+            "parameters": { "url": "https://cma-prod.crm3.dynamics.com/api/data/v9.2/contacts" }
+          }
+        },
+        "Email_me": {
+          "type": "OpenApiConnection",
+          "runAfter": { "Call_prod_api": ["Succeeded"] },
+          "inputs": {
+            "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365", "operationId": "SendEmailV2" },
+            "parameters": { "emailMessage/To": "boss@cma.ca", "emailMessage/Subject": "Report", "emailMessage/Body": "hi", "emailMessage/From": "greg.personal@gmail.com" }
+          }
+        }
+      }
+    }
+  }
+}

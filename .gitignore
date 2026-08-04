@@ -1,0 +1,21 @@
+# Node
+node_modules/
+engine/dist/
+*.log
+npm-debug.log*
+
+# Build / packaging
+*.zip
+out/
+bin/
+obj/
+
+# Env / secrets
+.env
+.env.*
+local.settings.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

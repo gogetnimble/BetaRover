@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {
+      "shared_commondataserviceforapps": {
+        "connection": { "connectionReferenceLogicalName": "cma_dataverse" }
+      },
+      "shared_office365": {
+        "connection": { "connectionReferenceLogicalName": "cma_office365_noreply" }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "triggers": {
+        "When_a_row_is_added": {
+          "type": "OpenApiConnectionWebhook",
+          "inputs": {
+            "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "SubscribeWebhookTrigger" },
+            "parameters": { "entityname": "contacts", "message": 1 }
+          }
+        }
+      },
+      "actions": {
+        "Try": {
+          "type": "Scope",
+          "runAfter": {},
+          "actions": {
+            "Set_LogSource": {
+              "type": "InitializeVariable",
+              "runAfter": {},
+              "inputs": { "variables": [{ "name": "LogSource", "type": "string", "value": "CMA - Membership - Add new Roles on Contact Creation" }] }
+            },
+            "Get_Flow_Configuration": {
+              "type": "OpenApiConnection",
+              "runAfter": { "Set_LogSource": ["Succeeded"] },
+              "inputs": {
+                "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps", "operationId": "ListRecords" },
+                "parameters": { "entityName": "cma_flowconfigurations", "$select": "cma_realtimemarketingtopicid", "$top": 1 }
+              }
+            },
+            "Send_notification": {
+              "type": "OpenApiConnection",
+              "runAfter": { "Get_Flow_Configuration": ["Succeeded"] },
+              "inputs": {
+                "host": { "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365", "operationId": "SendEmailV2" },
+                "parameters": { "emailMessage/To": "team@cma.ca", "emailMessage/Subject": "Role added", "emailMessage/Body": "<p>Done</p>", "emailMessage/From": "appdev-no-reply@cma.ca" }
+              }
+            }
+          }
+        },
+        "Catch": {
+          "type": "Scope",
+          "runAfter": { "Try": ["Failed", "TimedOut", "Skipped"] },
+          "actions": {
+            "Log_Error": {
+              "type": "Workflow",
+              "runAfter": {},
+              "inputs": {
+                "host": { "workflowReferenceName": "cma-system-validate-logger" },
+                "body": { "Level": "Error", "Source": "@variables('LogSource')", "EventDetail": "@string(result('Try'))" }
+              }
+            }
+          }
+        },
+        "Finally": {
+          "type": "Scope",
+          "runAfter": { "Catch": ["Succeeded", "Failed", "TimedOut", "Skipped"] },
+          "actions": {}
+        }
+      }
+    }
+  }
+}

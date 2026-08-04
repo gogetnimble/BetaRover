@@ -1,0 +1,111 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "BetaRover Flow Review Engine",
+    "description": "Reviews a single Power Automate cloud flow against a configurable ruleset and returns findings + a compliance score.",
+    "version": "1.0.0"
+  },
+  "host": "REPLACE-WITH-YOUR-FUNCTION.azurewebsites.net",
+  "basePath": "/api",
+  "schemes": ["https"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "apiKeyHeader": { "type": "apiKey", "in": "header", "name": "x-functions-key" }
+  },
+  "security": [{ "apiKeyHeader": [] }],
+  "paths": {
+    "/review": {
+      "post": {
+        "operationId": "ReviewFlow",
+        "summary": "Review a flow",
+        "description": "Runs deterministic rules (and optionally an AI pass) over one flow's clientdata.",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/ReviewRequest" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review result",
+            "schema": { "$ref": "#/definitions/ReviewResult" }
+          },
+          "400": { "description": "Invalid request" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ReviewRequest": {
+      "type": "object",
+      "required": ["displayName", "clientData"],
+      "properties": {
+        "displayName": { "type": "string", "description": "Flow display name (workflows.name)." },
+        "clientData": {
+          "type": "string",
+          "description": "The flow's clientdata, as the raw JSON string from Dataverse or an object."
+        },
+        "inventory": {
+          "type": "object",
+          "properties": {
+            "flowId": { "type": "string" },
+            "environment": { "type": "string" },
+            "ownerType": { "type": "string", "enum": ["user", "application", "team", "unknown"] },
+            "ownerName": { "type": "string" },
+            "state": { "type": "string" },
+            "source": { "type": "string", "enum": ["dataverse", "managementapi", "both"] }
+          }
+        },
+        "ruleset": {
+          "type": "object",
+          "description": "Optional. If omitted the engine uses its bundled default ruleset. Supply the Review Rules loaded from Dataverse to honour tenant configuration.",
+          "properties": {
+            "standardCode": { "type": "string" },
+            "standardName": { "type": "string" },
+            "version": { "type": "string" },
+            "standardText": { "type": "string" },
+            "rules": { "type": "array", "items": { "type": "object" } }
+          }
+        },
+        "ai": { "type": "boolean", "description": "Run the Azure OpenAI holistic pass in addition to rules.", "default": false }
+      }
+    },
+    "ReviewResult": {
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "flowId": { "type": "string" },
+        "score": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "integer" },
+            "passed": { "type": "integer" },
+            "failed": { "type": "integer" },
+            "warnings": { "type": "integer" },
+            "notApplicable": { "type": "integer" }
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ruleCode": { "type": "string" },
+              "ruleName": { "type": "string" },
+              "category": { "type": "string" },
+              "status": { "type": "string", "enum": ["pass", "warning", "fail", "not_applicable"] },
+              "severity": { "type": "string", "enum": ["info", "warning", "error", "critical"] },
+              "message": { "type": "string" },
+              "evidence": { "type": "string" },
+              "remediation": { "type": "string" },
+              "aiGenerated": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

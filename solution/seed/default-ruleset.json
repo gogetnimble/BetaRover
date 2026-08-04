@@ -1,0 +1,106 @@
+{
+  "standard": {
+    "br_code": "CMA-PA-STD",
+    "br_name": "CMA Power Automate Delivery Standard",
+    "br_version": "1.0.0",
+    "br_standardtext": "Cloud flows are named \"CMA - <Area> - <Function>\". Flows run as application/service principals, never user principals. Environment-specific configuration is loaded from the CMA Flow Configuration table (Row Count = 1), not hard-coded. Errors are logged to the CMA Flow Logs table via the shared logger child flow. Error handling uses Try/Catch/Finally scopes wired with \"configure run after\". Email is sent from appdev-no-reply@cma.ca, never a personal account."
+  },
+  "rules": [
+    {
+      "br_code": "NAMING_CONVENTION",
+      "br_name": "Flow naming convention",
+      "br_category": "Naming",
+      "br_evaluator": "namingConvention",
+      "br_severity": "error",
+      "br_enabled": true,
+      "br_weight": 3,
+      "br_parametersjson": "{\"prefix\":\"CMA\",\"separator\":\" - \",\"minSegments\":3}",
+      "br_remediation": "Rename the flow to \"<Prefix> - <Area> - <Function>\", e.g. \"CMA - Membership - Add new Roles on Contact Creation\". Use \"System\" as the area for system/child flows.",
+      "br_description": "Flows must be named \"<Prefix> - <Area> - <Function>\". The prefix also drives WatchFox auto-enable monitoring."
+    },
+    {
+      "br_code": "ERROR_HANDLING_SCOPES",
+      "br_name": "Try/Catch/Finally error handling",
+      "br_category": "ErrorHandling",
+      "br_evaluator": "errorHandlingScopes",
+      "br_severity": "error",
+      "br_enabled": true,
+      "br_weight": 3,
+      "br_parametersjson": "{\"tryName\":\"Try\",\"catchName\":\"Catch\",\"finallyName\":\"Finally\",\"requireFinally\":true,\"catchRunAfterStatuses\":[\"Failed\",\"TimedOut\",\"Skipped\"],\"finallyRunAfterStatuses\":[\"Succeeded\",\"Failed\",\"TimedOut\",\"Skipped\"]}",
+      "br_remediation": "Wrap the flow body in a \"Try\" Scope. Add a \"Catch\" Scope configured to run after Try on Failed/TimedOut/Skipped, and a \"Finally\" Scope that runs after Catch on all outcomes.",
+      "br_description": "Implements Try/Catch/Finally using Scopes and \"configure run after\" to emulate native error handling."
+    },
+    {
+      "br_code": "LOGGING_PRESENT",
+      "br_name": "Long-term logging present",
+      "br_category": "Logging",
+      "br_evaluator": "loggingPresent",
+      "br_severity": "warning",
+      "br_enabled": true,
+      "br_weight": 2,
+      "br_parametersjson": "{\"loggerNameContains\":[\"Logger\",\"Log\",\"Validate Logger\"],\"loggerWorkflowIds\":[]}",
+      "br_remediation": "Call the shared logging child flow (e.g. \"CMA - System - Validate Logger\") from your Catch scope, passing Level, Source and Event Details, so history outlives the 28-day Power Automate retention.",
+      "br_description": "Power Automate keeps run history for only 28 days; durable logs must be written to the CMA Flow Logs table."
+    },
+    {
+      "br_code": "CONFIG_LIST_TOP",
+      "br_name": "Bounded list queries (Row Count)",
+      "br_category": "Configuration",
+      "br_evaluator": "configListTop",
+      "br_severity": "warning",
+      "br_enabled": true,
+      "br_weight": 1,
+      "br_parametersjson": "{\"listOperationIds\":[\"ListRecords\"],\"topParamNames\":[\"$top\",\"top\"]}",
+      "br_remediation": "Set a row count (Top Count / $top) on every \"List rows\" action. When loading the Flow Configuration record, use Row Count = 1.",
+      "br_description": "Open-ended Dataverse queries raise Microsoft warnings; configuration is loaded from the Flow Configuration table with Row Count = 1."
+    },
+    {
+      "br_code": "APPROVED_EMAIL_SENDER",
+      "br_name": "Approved email sender",
+      "br_category": "Email",
+      "br_evaluator": "approvedEmailSender",
+      "br_severity": "error",
+      "br_enabled": true,
+      "br_weight": 2,
+      "br_parametersjson": "{\"emailOperationIds\":[\"SendEmailV2\",\"SendEmail\",\"SharedMailboxSendEmailV2\"],\"emailApiIdContains\":[\"office365\",\"outlook\",\"gmail\"],\"approvedSenders\":[\"appdev-no-reply@cma.ca\"],\"fromParamNames\":[\"emailMessage/From\",\"From\",\"MailboxAddress\"]}",
+      "br_remediation": "Send email using the approved connection (appdev-no-reply@cma.ca). Never send from a personal account.",
+      "br_description": "Outbound email must use the licensed no-reply connection, not a personal account."
+    },
+    {
+      "br_code": "RUN_AS_SERVICE_PRINCIPAL",
+      "br_name": "Runs as service principal",
+      "br_category": "Security",
+      "br_evaluator": "runAsServicePrincipal",
+      "br_severity": "warning",
+      "br_enabled": true,
+      "br_weight": 2,
+      "br_parametersjson": "{}",
+      "br_remediation": "Re-own the flow to an application user / service principal governed by an application security role (e.g. \"App-Membership\"), not a named user.",
+      "br_description": "Flows should run as application principals with a scoped application security role, never as a user principal."
+    },
+    {
+      "br_code": "NO_HARDCODED_ENV",
+      "br_name": "No hard-coded environment values",
+      "br_category": "Configuration",
+      "br_evaluator": "noHardcodedEnv",
+      "br_severity": "warning",
+      "br_enabled": true,
+      "br_weight": 1,
+      "br_parametersjson": "{\"ignoreHostSubstrings\":[\"schema.management.azure.com\",\"schemas.microsoft.com\",\"login.microsoftonline.com\"],\"guidCheck\":true}",
+      "br_remediation": "Move environment-specific URLs/IDs into the Flow Configuration table and load them at runtime, keyed by Environment / EnvironmentUrl.",
+      "br_description": "Per-environment values must not be hard-coded; they belong in the Flow Configuration table."
+    },
+    {
+      "br_code": "AI_REVIEW",
+      "br_name": "AI holistic review",
+      "br_category": "General",
+      "br_evaluator": "ai",
+      "br_severity": "info",
+      "br_enabled": true,
+      "br_weight": 1,
+      "br_parametersjson": "{}",
+      "br_remediation": "Review the AI observations and address any that apply.",
+      "br_description": "Adds holistic judgement (intent, readability, edge cases) that deterministic rules cannot express. Requires the AI pass to be enabled."
+    }
+  ]
+}

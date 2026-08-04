@@ -1,7 +1,7 @@
 # Web resource — `br_flowreview_app.html`
 
-The user interface of the Flow Code Review solution: a single, self-contained
-HTML web resource embedded in the **Flow Code Review** model-driven app. No build
+The user interface of the Flare solution: a single, self-contained
+HTML web resource embedded in the **Flare** model-driven app. No build
 step, no external libraries, no CDN — it is CSP-safe and deployable as-is.
 
 ## What it does

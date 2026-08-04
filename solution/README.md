@@ -1,6 +1,6 @@
 # Solution package
 
-Everything needed to stand up the **BetaRover Flow Code Review** solution in a
+Everything needed to stand up the **Flare** solution in a
 Dataverse environment, in two pieces that reflect what each tool does best:
 
 | Piece | What it delivers | How |

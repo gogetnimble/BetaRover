@@ -3,7 +3,7 @@
   <SolutionManifest>
     <UniqueName>BetaRoverFlowReview</UniqueName>
     <LocalizedNames>
-      <LocalizedName description="BetaRover Flow Code Review" languagecode="1033" />
+      <LocalizedName description="Flare" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
       <Description description="Crawls a tenant for Power Automate cloud flows and code-reviews them against a configurable delivery standard. This solution carries the global choices and the review web resource; run the provisioning script to add the six tables." languagecode="1033" />

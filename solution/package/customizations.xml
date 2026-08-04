@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Entities />
+  <Roles />
+  <Workflows />
+  <FieldSecurityProfiles />
+  <Templates />
+  <EntityMaps />
+  <EntityRelationships />
+  <OrganizationSettings />
+  <optionsets>
+    <optionset Name="br_severity" localizedName="Severity" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Severity" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="How serious a finding or rule is. Ordered least to most serious." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="Info" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="Warning" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="Error" languagecode="1033" /></labels></option>
+        <option value="4"><labels><label description="Critical" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_rulecategory" localizedName="Rule category" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Rule category" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Category groupings that mirror the sections of the delivery standard." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="Naming" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="ErrorHandling" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="Logging" languagecode="1033" /></labels></option>
+        <option value="4"><labels><label description="Configuration" languagecode="1033" /></labels></option>
+        <option value="5"><labels><label description="Security" languagecode="1033" /></labels></option>
+        <option value="6"><labels><label description="Email" languagecode="1033" /></labels></option>
+        <option value="7"><labels><label description="General" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_findingstatus" localizedName="Finding status" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Finding status" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Outcome of evaluating a single rule against a single flow." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="pass" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="warning" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="fail" languagecode="1033" /></labels></option>
+        <option value="4"><labels><label description="not_applicable" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_ownertype" localizedName="Owner type" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Owner type" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Principal type the flow runs as. Drives the run-as-service-principal rule." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="user" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="application" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="team" languagecode="1033" /></labels></option>
+        <option value="4"><labels><label description="unknown" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_flowstate" localizedName="Flow state" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Flow state" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Activation state of the discovered flow." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="Draft" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="Activated" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="Suspended" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_flowsource" localizedName="Inventory source" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Inventory source" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Where the inventory row's data came from." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="dataverse" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="managementapi" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="both" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_runstatus" localizedName="Run status" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Run status" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Lifecycle status of a review run." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="Queued" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="Running" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="Completed" languagecode="1033" /></labels></option>
+        <option value="4"><labels><label description="Failed" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_flowreviewstatus" localizedName="Flow review status" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Flow review status" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="Overall pass/warn/fail rollup for a single flow's review." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="Pass" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="Warning" languagecode="1033" /></labels></option>
+        <option value="3"><labels><label description="Fail" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+    <optionset Name="br_triggersource" localizedName="Trigger source" OptionSetType="picklist" IsCustomizable="1" IsGlobal="1" IntroducedVersion="1.0.0.0">
+      <displaynames>
+        <displayname description="Trigger source" languagecode="1033" />
+      </displaynames>
+      <Descriptions>
+        <Description description="How a review run was started. On-demand rows are created by the web resource's Run review now button." languagecode="1033" />
+      </Descriptions>
+      <options>
+        <option value="1"><labels><label description="schedule" languagecode="1033" /></labels></option>
+        <option value="2"><labels><label description="ondemand" languagecode="1033" /></labels></option>
+      </options>
+    </optionset>
+  </optionsets>
+  <WebResources>
+    <WebResource>
+      <WebResourceId>{b1f0a2c4-5d6e-47a8-9b10-3c2d1e0f4a5b}</WebResourceId>
+      <Name>br_flowreview_app.html</Name>
+      <DisplayName>Flow Code Review app</DisplayName>
+      <Description>Dashboard, per-flow review, and add-a-rule UI for the Flow Code Review app.</Description>
+      <FileName>/WebResources/br_flowreview_app.html</FileName>
+      <WebResourceType>1</WebResourceType>
+      <IsCustomizable>1</IsCustomizable>
+      <CanBeDeleted>1</CanBeDeleted>
+      <IsHidden>0</IsHidden>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsEnabledForMobileClient>0</IsEnabledForMobileClient>
+      <IsAvailableForMobileOffline>0</IsAvailableForMobileOffline>
+      <LanguageCode>0</LanguageCode>
+    </WebResource>
+  </WebResources>
+  <Languages>
+    <Language>1033</Language>
+  </Languages>
+</ImportExportXml>

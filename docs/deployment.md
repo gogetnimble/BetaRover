@@ -33,32 +33,51 @@ At a glance:
 - Power Automate **per-flow / process** plan or equivalent for the scheduled and
   Dataverse-triggered flows and the Management API HTTP action.
 
-## 2. Create the Dataverse tables
+## 2. Import the solution + provision the tables
 
-From [`solution/schema/tables.json`](../solution/schema/tables.json) create the
-six tables — `br_reviewstandard`, `br_reviewrule`, `br_flowinventory`,
-`br_reviewrun`, `br_flowreview`, `br_reviewfinding` — with the listed columns,
-choices, lookups, and the `br_flowid` alternate key. Use your own publisher
-prefix if not `br_` (and mirror it into the web resource's `CONFIG.entities`).
+The solution ships in two pieces (full detail in
+[`solution/README.md`](../solution/README.md)):
 
-> **New since the first cut:** `br_reviewrun` has two extra columns —
-> `br_triggersource` (`schedule` / `ondemand`) and `br_targetflowid` — that power
-> the on-demand **Run review now** button. They're already in `tables.json`.
+1. **Import the solution zip** — `BetaRoverFlowReview` carries the publisher, the
+   **9 global choices**, and the **web resource**. Pack and import:
 
-**Write down your published choice values.** Local choice columns get
-environment-specific integers. You'll need these for the web resource
-(step 7) and the on-demand flow trigger (step 6):
-`br_reviewrule.br_category`, `br_reviewrule.br_severity`,
-`br_reviewrun.br_status`, `br_reviewrun.br_triggersource`.
+   ```bash
+   cd solution/package && zip -r -X ../BetaRoverFlowReview_1_0_0_0.zip . -x '.*'
+   # make.powerapps.com → Solutions → Import, or:
+   pac solution import --path solution/BetaRoverFlowReview_1_0_0_0.zip
+   ```
+
+   Because the choices ship in the solution, their option values are
+   **deterministic** (Info=1, Warning=2, Queued=1, ondemand=2, …) and already
+   match the web resource's `CHOICES` map — no per-environment choice hunting.
+
+2. **Provision the six tables** from
+   [`solution/schema/tables.json`](../solution/schema/tables.json) via the
+   Web API (auto-generates default forms/views), landing them in the imported
+   solution:
+
+   ```bash
+   cd solution/provision
+   export DATAVERSE_URL="https://yourorg.crm.dynamics.com"
+   export DATAVERSE_TOKEN="$(az account get-access-token \
+      --resource https://yourorg.crm.dynamics.com --query accessToken -o tsv)"
+   node provision.mjs --seed
+   ```
+
+`br_reviewrun` includes `br_triggersource` (`schedule`/`ondemand`) and
+`br_targetflowid`, which power the on-demand **Run review now** button. Use your
+own publisher prefix if not `br_` (and mirror it into the web resource's
+`CONFIG.entities`).
 
 ## 3. Seed the standard + rules
 
-Import [`solution/seed/default-ruleset.json`](../solution/seed/default-ruleset.json)
-as one **Review Standard** (mark it `Active`) plus its eight **Review Rule** rows.
-Regenerate it from code any time with `cd engine && npm run emit-seed`. Then
-**edit the rows** for your tenant — prefix, approved senders, logger names — via
-the app's Standard & Rules tab or directly. That data-driven edit *is* the point
-of the design: no redeploy to change a threshold.
+`node provision.mjs --seed` (step 2) already imports the default **Review
+Standard** (marked `Active`) and its eight **Review Rule** rows from
+[`solution/seed/default-ruleset.json`](../solution/seed/default-ruleset.json).
+Regenerate that seed from code any time with `cd engine && npm run emit-seed`.
+Then **edit the rows** for your tenant — prefix, approved senders, logger names —
+via the app's Standard & Rules tab or directly. That data-driven edit *is* the
+point of the design: no redeploy to change a threshold.
 
 ## 4. Deploy the engine (Azure Function)
 
@@ -118,10 +137,11 @@ Then add the UI web resource:
 
 1. Add web resource **`br_flowreview_app`** (type *Webpage (HTML)*) from
    [`webresource/br_flowreview_app.html`](../webresource/br_flowreview_app.html).
-2. **Configure it** — edit the `CONFIG` and `CHOICES` blocks at the top of the
-   file with your compliance threshold, publisher prefix (if not `br_`),
-   navigation property names, and the **published choice values** from step 2.
-   Full instructions: [`webresource/README.md`](../webresource/README.md).
+2. **Configure it** — the `CHOICES` block already matches the deterministic
+   values shipped by the solution (step 2), so it works as-is. You only touch
+   `CONFIG` if you changed the publisher prefix or the lookup navigation
+   property names. Full instructions:
+   [`webresource/README.md`](../webresource/README.md).
 3. Surface it **full-page**: add a **Subarea** with **Type = Web resource**,
    **URL = `$webresource:br_flowreview_app`**, titled *Dashboard*.
 4. **Publish all customizations.**

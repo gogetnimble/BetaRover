@@ -1,0 +1,916 @@
+<!--
+  BetaRover Flow Code Review — HTML web resource (br_flowreview_app.html)
+  ---------------------------------------------------------------------------
+  A single self-contained web resource for the "Flow Code Review" model-driven
+  app. Three tabs: Tenant Dashboard, Flow Review (per-flow findings), and
+  Standard & Rules (configure the criteria + add new rules).
+
+  DATA SOURCE
+    - When hosted inside a model-driven app it uses Xrm.WebApi to read/write the
+      six br_* tables. No external libraries, no CDN — CSP-safe.
+    - When opened standalone (no Xrm) it renders bundled SAMPLE data so it can be
+      previewed and design-reviewed outside Dataverse. A pill in the header shows
+      which mode is active ("Live" vs "Preview").
+
+  CONFIGURE BEFORE DEPLOY
+    - CONFIG.complianceThreshold — score at/above which a flow counts "compliant".
+    - CHOICES.* — the *published* option-set integer values in YOUR environment.
+      Local choice columns get environment-specific values (often 12157xxxx), so
+      set these to match. See webresource/README.md → "Configure choice values".
+    - CONFIG.navProps.* — single/collection navigation property names if your
+      lookup schema names differ from the defaults.
+  Reads use OData formatted values, so integers are only needed on WRITE
+  (creating a rule / queuing an on-demand run).
+-->
+<title>Flow Code Review</title>
+<style>
+  :root{
+    --bg:#eef1f7; --panel:#ffffff; --panel-2:#f6f8fc;
+    --border:#d7dded; --border-strong:#c3cbe0;
+    --text:#141a2a; --muted:#5a637a; --faint:#8b93a8;
+    --accent:#2f5bff; --accent-ink:#1b3ad1; --accent-weak:#e5ebff;
+    --good:#1f9d63; --good-bg:#e2f4ea;
+    --warn:#d76a15; --warn-bg:#fbe8d6;
+    --bad:#d63a34;  --bad-bg:#fbe4e2;
+    --na:#7b849a;   --na-bg:#eceef4;
+    --info:#3f74c7; --info-bg:#e6eefb;
+    --ai:#7b52d6;   --ai-bg:#efe8fc;
+    --shadow:0 1px 2px rgba(20,26,42,.06), 0 8px 24px rgba(20,26,42,.06);
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0c101b; --panel:#151b2b; --panel-2:#101623;
+      --border:#232c41; --border-strong:#313c56;
+      --text:#e7ebf5; --muted:#98a2ba; --faint:#6b7590;
+      --accent:#5f83ff; --accent-ink:#8aa4ff; --accent-weak:#1b2646;
+      --good:#3fca86; --good-bg:#12281d; --warn:#f2954a; --warn-bg:#331f0e;
+      --bad:#f0645c; --bad-bg:#2e1615; --na:#8791a8; --na-bg:#1a2032;
+      --info:#6ea1ec; --info-bg:#14223a; --ai:#a888f2; --ai-bg:#211a37;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f7; --panel:#ffffff; --panel-2:#f6f8fc; --border:#d7dded; --border-strong:#c3cbe0;
+    --text:#141a2a; --muted:#5a637a; --faint:#8b93a8; --accent:#2f5bff; --accent-ink:#1b3ad1; --accent-weak:#e5ebff;
+    --good:#1f9d63; --good-bg:#e2f4ea; --warn:#d76a15; --warn-bg:#fbe8d6; --bad:#d63a34; --bad-bg:#fbe4e2;
+    --na:#7b849a; --na-bg:#eceef4; --info:#3f74c7; --info-bg:#e6eefb; --ai:#7b52d6; --ai-bg:#efe8fc;
+    --shadow:0 1px 2px rgba(20,26,42,.06), 0 8px 24px rgba(20,26,42,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c101b; --panel:#151b2b; --panel-2:#101623; --border:#232c41; --border-strong:#313c56;
+    --text:#e7ebf5; --muted:#98a2ba; --faint:#6b7590; --accent:#5f83ff; --accent-ink:#8aa4ff; --accent-weak:#1b2646;
+    --good:#3fca86; --good-bg:#12281d; --warn:#f2954a; --warn-bg:#331f0e; --bad:#f0645c; --bad-bg:#2e1615;
+    --na:#8791a8; --na-bg:#1a2032; --info:#6ea1ec; --info-bg:#14223a; --ai:#a888f2; --ai-bg:#211a37;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-ui); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{margin:0; text-wrap:balance; font-weight:650}
+  .mono{font-family:var(--font-mono); font-variant-numeric:tabular-nums}
+  .eyebrow{font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); font-weight:700}
+  button{font-family:inherit; cursor:pointer}
+  ::selection{background:var(--accent-weak)}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+  .shell{max-width:1180px; margin:0 auto; padding:14px 22px 60px; min-height:100vh}
+
+  /* header */
+  .app-header{display:flex; align-items:center; gap:12px; padding:6px 0 14px; flex-wrap:wrap}
+  .app-header .glyph{width:26px; height:26px; border-radius:7px; flex:none; background:linear-gradient(135deg,var(--accent),#7b52d6); color:#fff; display:grid; place-items:center; font-family:var(--font-mono); font-weight:700; font-size:11px}
+  .app-header h1{font-size:16px}
+  .app-header .env{font-size:11px; color:var(--muted); font-family:var(--font-mono); padding:2px 8px; border:1px solid var(--border-strong); border-radius:20px; background:var(--panel)}
+  .app-header .spacer{flex:1}
+  .statuspill{display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid var(--border)}
+  .statuspill .dot{width:7px; height:7px; border-radius:50%}
+  .statuspill.live{background:var(--good-bg); color:var(--good); border-color:transparent}
+  .statuspill.live .dot{background:var(--good)}
+  .statuspill.preview{background:var(--warn-bg); color:var(--warn); border-color:transparent}
+  .statuspill.preview .dot{background:var(--warn)}
+
+  .wr-toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 0 16px}
+  .segmented{display:inline-flex; background:var(--panel-2); border:1px solid var(--border); border-radius:9px; padding:3px}
+  .segmented button{border:0; background:transparent; color:var(--muted); font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:6px; display:flex; align-items:center; gap:7px}
+  .segmented button.active{background:var(--panel); color:var(--text); box-shadow:var(--shadow)}
+  .segmented button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.5}
+
+  .btn{display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 13px; border-radius:7px; border:1px solid var(--border-strong); background:var(--panel); color:var(--text); font-size:12.5px; font-weight:600}
+  .btn:hover{border-color:var(--accent)}
+  .btn svg{width:14px;height:14px}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+  .btn.primary:hover{background:var(--accent-ink)}
+  .btn.ghost{background:transparent}
+  .btn[disabled]{opacity:.55; cursor:default; border-color:var(--border)}
+  .mini{display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 11px; border-radius:7px; border:1px solid var(--border); background:var(--panel); color:var(--muted); font-size:12px; font-weight:600}
+  .mini svg{width:14px;height:14px}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow)}
+  .pad{padding:16px 18px}
+  .grid{display:grid; gap:14px}
+
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; letter-spacing:.02em; white-space:nowrap}
+  .chip svg{width:12px;height:12px}
+  .chip.pass{background:var(--good-bg); color:var(--good)}
+  .chip.warn{background:var(--warn-bg); color:var(--warn)}
+  .chip.fail{background:var(--bad-bg); color:var(--bad)}
+  .chip.na{background:var(--na-bg); color:var(--na)}
+  .chip.info{background:var(--info-bg); color:var(--info)}
+  .chip.ai{background:var(--ai-bg); color:var(--ai)}
+  .sev{font-family:var(--font-mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:5px; font-weight:700}
+  .sev.error,.sev.critical{background:var(--bad-bg); color:var(--bad)}
+  .sev.warning{background:var(--warn-bg); color:var(--warn)}
+  .sev.info{background:var(--info-bg); color:var(--info)}
+
+  .page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
+  .page-head h2{font-size:22px; letter-spacing:-.01em}
+  .page-head .sub{color:var(--muted); font-size:13px; margin-top:3px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .kpi{padding:15px 16px}
+  .kpi .label{color:var(--muted); font-size:12px; font-weight:600; display:flex; align-items:center; gap:7px}
+  .kpi .val{font-size:30px; font-weight:700; letter-spacing:-.02em; margin-top:8px; font-family:var(--font-mono)}
+  .kpi .val small{font-size:15px; color:var(--faint); font-weight:600}
+  .kpi .delta{font-size:11.5px; margin-top:6px; font-weight:600; display:inline-flex; align-items:center; gap:4px; min-height:16px}
+  .kpi .delta.up{color:var(--good)} .kpi .delta.down{color:var(--bad)} .kpi .delta.flat{color:var(--faint)}
+  .split{grid-template-columns:1.55fr 1fr}
+  .card-h{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 18px; border-bottom:1px solid var(--border)}
+  .card-h h3{font-size:14px}
+  .card-h .meta{font-size:11.5px; color:var(--faint); font-family:var(--font-mono)}
+
+  table{width:100%; border-collapse:collapse}
+  .ftable{font-size:13px}
+  .ftable th{text-align:left; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:9px 14px; border-bottom:1px solid var(--border)}
+  .ftable td{padding:10px 14px; border-bottom:1px solid var(--border); vertical-align:middle}
+  .ftable tr:last-child td{border-bottom:0}
+  .ftable tbody tr:hover{background:var(--panel-2); cursor:pointer}
+  .flow-name{font-weight:600}
+  .flow-env{font-size:11px; color:var(--faint); font-family:var(--font-mono); margin-top:2px}
+  .score-cell{display:flex; align-items:center; gap:9px}
+  .grade{width:26px; height:26px; border-radius:7px; display:grid; place-items:center; font-weight:800; font-size:13px; font-family:var(--font-mono); flex:none}
+  .grade.A,.grade.B{background:var(--good-bg); color:var(--good)}
+  .grade.C{background:var(--warn-bg); color:var(--warn)}
+  .grade.D,.grade.F{background:var(--bad-bg); color:var(--bad)}
+  .bar{height:6px; border-radius:4px; background:var(--panel-2); overflow:hidden; width:80px}
+  .bar > i{display:block; height:100%; border-radius:4px}
+  .findpills{display:flex; gap:5px}
+  .fp{font-family:var(--font-mono); font-size:11px; font-weight:700; padding:1px 6px; border-radius:5px}
+
+  .legend{display:flex; flex-direction:column; gap:12px}
+  .legrow{display:flex; align-items:center; gap:10px}
+  .legrow .k{width:88px; font-size:10.5px; color:var(--muted)}
+  .legrow .track{flex:1; height:9px; border-radius:5px; background:var(--panel-2); overflow:hidden}
+  .legrow .track > i{display:block; height:100%}
+  .legrow .n{width:36px; text-align:right; font-family:var(--font-mono); font-size:12px; font-weight:700}
+
+  .donutwrap{display:flex; align-items:center; gap:18px}
+  .donut{width:118px; height:118px; flex:none}
+  .sev-list{display:flex; flex-direction:column; gap:9px; flex:1}
+  .sev-item{display:flex; align-items:center; gap:9px; font-size:12.5px}
+  .sev-item .swatch{width:10px;height:10px;border-radius:3px;flex:none}
+  .sev-item .n{margin-left:auto; font-family:var(--font-mono); font-weight:700}
+
+  .fr-head{display:flex; gap:18px; align-items:stretch; flex-wrap:wrap}
+  .fr-title{flex:1; min-width:260px}
+  .fr-title .crumb{display:flex; align-items:center; gap:7px; color:var(--faint); font-size:12px; margin-bottom:8px; cursor:pointer}
+  .fr-title .crumb:hover{color:var(--accent)}
+  .fr-title h2{font-size:20px; letter-spacing:-.01em}
+  .fr-metaline{display:flex; gap:8px 18px; flex-wrap:wrap; margin-top:12px; color:var(--muted); font-size:12.5px}
+  .fr-metaline b{color:var(--text); font-weight:600}
+  .fr-metaline .k{display:flex; align-items:center; gap:6px}
+  .fr-metaline svg{width:13px;height:13px;color:var(--faint)}
+  .scorecard{width:250px; flex:none; display:flex; align-items:center; gap:16px}
+  .scorecard .counts{display:flex; flex-direction:column; gap:7px; font-size:12px}
+  .scorecard .counts div{display:flex; align-items:center; gap:8px}
+  .scorecard .counts b{font-family:var(--font-mono); width:22px; text-align:right}
+
+  .findings{display:flex; flex-direction:column}
+  .finding{display:grid; grid-template-columns:120px 1fr; gap:16px; padding:16px 18px; border-bottom:1px solid var(--border)}
+  .finding:last-child{border-bottom:0}
+  .finding.na{opacity:.72}
+  .finding .fstatus{display:flex; flex-direction:column; gap:8px; align-items:flex-start}
+  .finding .rcode{font-family:var(--font-mono); font-size:10.5px; color:var(--faint); letter-spacing:.02em}
+  .finding h4{font-size:13.5px; margin-bottom:4px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .finding .msg{color:var(--muted); font-size:12.8px}
+  .evidence{margin-top:10px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:9px 11px; font-family:var(--font-mono); font-size:11.5px; color:var(--text); overflow-x:auto}
+  .evidence .lbl{color:var(--faint); user-select:none}
+  .remediation{margin-top:9px; font-size:12.5px; color:var(--muted); display:flex; gap:8px}
+  .remediation svg{width:14px;height:14px;color:var(--accent);flex:none;margin-top:1px}
+  .ai-block{background:linear-gradient(180deg,var(--ai-bg),transparent 70%)}
+  .ai-obs{display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--border); font-size:12.8px; color:var(--muted)}
+  .ai-obs:last-child{border-bottom:0}
+  .ai-obs .tag{flex:none; margin-top:1px}
+
+  .std-head{display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap}
+  .std-head .txt{flex:1; min-width:280px}
+  .std-head h2{font-size:19px}
+  .std-text{margin-top:12px; padding:13px 15px; background:var(--panel-2); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:8px; color:var(--muted); font-size:12.8px; line-height:1.65; white-space:pre-wrap}
+  .toggle{width:38px; height:22px; border-radius:20px; background:var(--accent); position:relative; flex:none; border:0}
+  .toggle::after{content:""; position:absolute; top:2px; left:18px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .15s}
+  .toggle.off{background:var(--border-strong)}
+  .toggle.off::after{left:2px}
+  .rules th:first-child, .rules td:first-child{padding-left:18px}
+  .rules td{padding:12px 14px; border-bottom:1px solid var(--border); vertical-align:top; font-size:12.8px}
+  .rules th{text-align:left; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); font-weight:700; padding:11px 14px; border-bottom:1px solid var(--border)}
+  .rules tr:last-child td{border-bottom:0}
+  .rname{font-weight:650} .rdesc{color:var(--muted); font-size:12px; margin-top:3px; max-width:340px}
+  .params{font-family:var(--font-mono); font-size:11px; color:var(--muted); background:var(--panel-2); border:1px solid var(--border); border-radius:6px; padding:6px 8px; max-width:260px; overflow-x:auto; white-space:nowrap}
+  .weight{display:inline-flex; gap:3px}
+  .weight i{width:6px;height:14px;border-radius:2px;background:var(--border-strong)}
+  .weight i.on{background:var(--accent)}
+
+  .note{display:flex; gap:10px; padding:12px 14px; border-radius:10px; background:var(--accent-weak); border:1px solid var(--border); color:var(--muted); font-size:12.5px; align-items:flex-start}
+  .note svg{width:16px;height:16px;color:var(--accent);flex:none;margin-top:1px}
+  .note b{color:var(--text)}
+  .empty{padding:38px 18px; text-align:center; color:var(--muted)}
+  .empty h3{font-size:15px; color:var(--text); margin-bottom:6px}
+  .spin{width:16px;height:16px;border:2px solid var(--border-strong);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:-3px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+
+  .view{display:none}
+  .view.active{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.view.active{animation:none}}
+
+  /* modal */
+  .iconbtn{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--panel);color:var(--muted);display:grid;place-items:center;font-size:13px}
+  .iconbtn:hover{border-color:var(--bad);color:var(--bad)}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(8,12,22,.55);display:grid;place-items:start center;z-index:60;padding:34px 18px;overflow:auto}
+  .modal-backdrop[hidden]{display:none}
+  .modal{width:min(640px,96vw);box-shadow:0 24px 70px rgba(0,0,0,.4);animation:pop .18s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.modal{animation:none}}
+  .modal-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .modal-h h3{font-size:16px;margin-top:3px}
+  .modal-body{padding:18px 20px;display:grid;gap:14px}
+  .modal-f{display:flex;justify-content:space-between;align-items:center;gap:9px;padding:14px 20px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--panel);border-radius:0 0 12px 12px}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field.full{grid-column:1/-1}
+  .field > label{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .field .hint{font-size:10.5px;color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px;font-family:var(--font-mono)}
+  .input,.select,.ta{font-family:var(--font-ui);font-size:13px;color:var(--text);background:var(--panel-2);border:1px solid var(--border-strong);border-radius:8px;padding:9px 11px;width:100%}
+  .input.mono,.ta.mono{font-family:var(--font-mono);font-size:12px}
+  .ta{resize:vertical;min-height:56px;line-height:1.5}
+  .input:focus,.select:focus,.ta:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+  .wsel{display:inline-flex;background:var(--panel-2);border:1px solid var(--border-strong);border-radius:8px;padding:3px;gap:2px;width:max-content}
+  .wsel button{border:0;background:transparent;color:var(--muted);font-weight:700;font-family:var(--font-mono);padding:6px 15px;border-radius:6px;font-size:12px}
+  .wsel button.active{background:var(--accent);color:#fff}
+  .row-inline{display:flex;align-items:flex-start;gap:34px}
+  tr.justAdded td{animation:flashrow 1.6s ease}
+  @keyframes flashrow{0%{background:var(--accent-weak)}100%{background:transparent}}
+  .err-msg{color:var(--bad);font-size:11.5px;font-weight:600;display:none}
+  .err-msg.show{display:block}
+
+  /* toast */
+  .toast-wrap{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:80;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .toast{display:flex;align-items:center;gap:9px;background:var(--text);color:var(--bg);font-size:12.5px;font-weight:600;padding:10px 15px;border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.3);animation:pop .18s ease}
+  .toast.err{background:var(--bad);color:#fff}
+  .toast svg{width:15px;height:15px}
+
+  @media (max-width:880px){ .split,.kpis{grid-template-columns:1fr 1fr} .fr-head{flex-direction:column} .scorecard{width:auto} }
+  @media (max-width:560px){ .kpis{grid-template-columns:1fr} .finding{grid-template-columns:1fr} }
+</style>
+
+<div class="shell">
+  <header class="app-header">
+    <span class="glyph">FR</span>
+    <h1>Flow Code Review</h1>
+    <span class="env" id="envPill">—</span>
+    <span class="spacer"></span>
+    <span class="statuspill preview" id="statusPill"><span class="dot"></span>Preview</span>
+    <button class="mini" id="themeBtn" title="Toggle light / dark">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
+    </button>
+  </header>
+
+  <div class="wr-toolbar">
+    <div class="segmented" role="tablist">
+      <button class="active" data-view="dash" role="tab"><span class="dot"></span>Tenant Dashboard</button>
+      <button data-view="flow" role="tab"><span class="dot"></span>Flow Review</button>
+      <button data-view="std" role="tab"><span class="dot"></span>Standard &amp; Rules</button>
+    </div>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="view active" id="view-dash">
+    <div class="page-head">
+      <div>
+        <h2>Tenant flow health</h2>
+        <div class="sub" id="dashSub">Loading…</div>
+      </div>
+      <div style="display:flex; gap:9px; align-items:center">
+        <span class="mono" id="lastCrawl" style="font-size:11.5px; color:var(--faint)"></span>
+      </div>
+    </div>
+    <div class="grid kpis" id="kpis" style="margin-bottom:14px"></div>
+    <div class="grid split">
+      <div class="card">
+        <div class="card-h"><h3>Lowest-scoring flows</h3><span class="meta">click a row to open its review</span></div>
+        <div style="overflow-x:auto"><table class="ftable">
+          <thead><tr><th>Flow</th><th>Owner</th><th>Score</th><th>Findings</th></tr></thead>
+          <tbody id="flowRows"></tbody>
+        </table></div>
+      </div>
+      <div class="grid" style="align-content:start">
+        <div class="card">
+          <div class="card-h"><h3>Findings by severity</h3></div>
+          <div class="pad donutwrap" id="sevWrap"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><h3>Compliance by rule</h3></div>
+          <div class="pad legend" id="ruleLegend"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FLOW REVIEW ===================== -->
+  <section class="view" id="view-flow">
+    <div id="detailHost"><div class="card empty">Select a flow from the dashboard to see its review.</div></div>
+  </section>
+
+  <!-- ===================== STANDARD & RULES ===================== -->
+  <section class="view" id="view-std">
+    <div class="card pad" style="margin-bottom:14px">
+      <div class="std-head">
+        <div class="txt">
+          <div class="eyebrow" style="margin-bottom:6px">Review Standard · br_reviewstandard</div>
+          <h2 id="stdName">—</h2>
+          <div class="fr-metaline" style="margin-top:8px" id="stdMeta"></div>
+          <div class="std-text" id="stdText"></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
+          <span class="eyebrow">Active</span>
+          <button class="toggle" id="stdActive" aria-label="Standard is active"></button>
+          <span class="mono" style="font-size:11px;color:var(--faint)">passed to AI as context</span>
+        </div>
+      </div>
+    </div>
+    <div class="note" style="margin-bottom:14px">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2v4M10 14v4M2 10h4M14 10h4"/><circle cx="10" cy="10" r="3"/></svg>
+      <span>Every value below — the naming prefix, the approved sender, scope names, the <span class="mono">$top</span> parameter — lives in the rule's <b>Parameters</b> column. Change a threshold here and the next crawl uses it: <b>no code change, no redeploy.</b> Severity and weight drive the 0–100 score.</span>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Review Rules · br_reviewrule</h3>
+        <button class="btn primary" id="addRuleBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12"/></svg>New rule</button>
+      </div>
+      <div style="overflow-x:auto"><table class="rules">
+        <thead><tr><th>On</th><th>Rule</th><th>Category</th><th>Severity</th><th>Weight</th><th>Parameters</th></tr></thead>
+        <tbody id="ruleRows"></tbody>
+      </table></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== ADD-RULE MODAL (Quick Create for br_reviewrule) ===== -->
+<div class="modal-backdrop" id="ruleModal" hidden>
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
+    <div class="modal-h">
+      <div><div class="eyebrow" style="margin-bottom:4px">Quick create · br_reviewrule</div><h3 id="rmTitle">Add review rule</h3></div>
+      <button class="iconbtn" id="rmClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field full"><label>Rule name</label><input class="input" id="f-name" placeholder="e.g. Concurrency control is set"></div>
+      <div class="form-grid">
+        <div class="field"><label>Rule code</label><input class="input mono" id="f-code" placeholder="CONCURRENCY_SET"></div>
+        <div class="field"><label>Category</label>
+          <select class="select" id="f-cat">
+            <option>Naming</option><option>ErrorHandling</option><option>Logging</option>
+            <option selected>Configuration</option><option>Email</option><option>Security</option><option>General</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="field"><label>Evaluator <span class="hint">br_evaluator</span></label>
+          <select class="select" id="f-eval">
+            <option value="namingConvention">namingConvention</option>
+            <option value="errorHandlingScopes">errorHandlingScopes</option>
+            <option value="loggingPresent">loggingPresent</option>
+            <option value="configListTop" selected>configListTop</option>
+            <option value="approvedEmailSender">approvedEmailSender</option>
+            <option value="runAsServicePrincipal">runAsServicePrincipal</option>
+            <option value="noHardcodedEnv">noHardcodedEnv</option>
+            <option value="ai">ai — Azure OpenAI pass</option>
+          </select>
+        </div>
+        <div class="field"><label>Severity</label>
+          <select class="select" id="f-sev"><option value="error">error</option><option value="warning" selected>warning</option><option value="info">info</option></select>
+        </div>
+      </div>
+      <div class="row-inline">
+        <div class="field"><label>Weight <span class="hint">scoring impact</span></label>
+          <div class="wsel" id="f-weight"><button type="button" data-w="1">1</button><button type="button" data-w="2" class="active">2</button><button type="button" data-w="3">3</button></div>
+        </div>
+        <div class="field"><label>Enabled</label><button class="toggle" id="f-enabled" type="button" aria-label="enabled"></button></div>
+      </div>
+      <div class="field full"><label>Description</label><textarea class="ta" id="f-desc" placeholder="What this rule checks and why it matters."></textarea></div>
+      <div class="field full"><label>Parameters <span class="hint">br_parametersjson — tenant config, no redeploy</span></label>
+        <textarea class="ta mono" id="f-params" spellcheck="false">{}</textarea>
+        <span class="err-msg" id="f-params-err">Parameters must be valid JSON.</span>
+      </div>
+      <div class="field full"><label>Remediation</label><textarea class="ta" id="f-rem" placeholder="How a developer brings a failing flow into line."></textarea></div>
+      <span class="err-msg" id="f-req-err">Rule name and code are both required.</span>
+    </div>
+    <div class="modal-f">
+      <span class="mono" style="font-size:11px;color:var(--faint)">writes a Review Rule row · picked up on next crawl</span>
+      <span style="display:flex;gap:9px"><button class="btn ghost" id="rmCancel">Cancel</button><button class="btn primary" id="rmSave">Save &amp; add to standard</button></span>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+"use strict";
+/* ============================ CONFIGURATION ============================ */
+const CONFIG = {
+  complianceThreshold: 70,           // score >= this counts as "compliant"
+  entities: {                        // logical names (singular) → Web API set names (plural)
+    standard:'br_reviewstandard', rule:'br_reviewrule', inventory:'br_flowinventory',
+    run:'br_reviewrun', flowreview:'br_flowreview', finding:'br_reviewfinding'
+  },
+  navProps: {                        // navigation property names for $expand / @odata.bind
+    reviewToInventory:'br_flowinventoryid',   // single-valued (flowreview → inventory)
+    ruleToStandard:'br_standardid'            // single-valued (rule → standard)
+  },
+  poll: { intervalMs:4000, timeoutMs:180000 } // on-demand run polling
+};
+/* Published OPTION-SET INTEGER VALUES — SET THESE TO MATCH YOUR ENVIRONMENT.
+   Only used on WRITE (creating a rule / queuing an on-demand run). Reads use
+   OData formatted values and don't need these. See README → choice values. */
+const CHOICES = {
+  category:   { Naming:1, ErrorHandling:2, Logging:3, Configuration:4, Security:5, Email:6, General:7 },
+  severity:   { info:1, warning:2, error:3, critical:4 },
+  runStatus:  { Queued:1, Running:2, Completed:3, Failed:4 },
+  triggerSrc: { schedule:1, ondemand:2 }
+};
+
+/* ============================ XRM / DATA LAYER ============================ */
+function getXrm(){ try { return window.Xrm || (window.parent && window.parent.Xrm) || null; } catch(_) { return null; } }
+const XRM = getXrm();
+const LIVE = !!(XRM && XRM.WebApi);
+
+const gradeFor = s => s>=90?'A':s>=80?'B':s>=70?'C':s>=55?'D':'F';
+const scoreColor = s => s>=85?'var(--good)':s>=70?'var(--warn)':'var(--bad)';
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = (r,f) => r[f+'@OData.Community.Display.V1.FormattedValue'] ?? r[f];
+const shortDate = d => d ? new Date(d).toLocaleString(undefined,{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+
+/* ---- LIVE data source (Dataverse Web API via Xrm.WebApi) ---- */
+const Live = {
+  async meta(){
+    let env='—', user='';
+    try { const g = XRM.Utility.getGlobalContext();
+      env = (g.organizationSettings && g.organizationSettings.uniqueName) || g.getClientUrl().replace(/^https?:\/\//,'').split('.')[0];
+      user = g.userSettings && g.userSettings.userName; } catch(_){}
+    return { live:true, env, user };
+  },
+  async activeStandard(){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,
+      "?$select=br_name,br_code,br_version,br_standardtext,br_isactive&$filter=br_isactive eq true&$top=1");
+    const s = r.entities[0];
+    if(!s) return null;
+    return { id:s.br_reviewstandardid, name:s.br_name, code:s.br_code, version:s.br_version, text:s.br_standardtext||'', active:!!s.br_isactive };
+  },
+  async recentRuns(){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,
+      "?$select=br_name,br_completedon,br_flowsscanned,br_findingscount,br_averagescore&$filter=br_completedon ne null&$orderby=br_completedon desc&$top=2");
+    return r.entities.map(e=>({ id:e.br_reviewrunid, name:e.br_name, completedOn:e.br_completedon,
+      flowsScanned:e.br_flowsscanned||0, findingsCount:e.br_findingscount||0, avgScore:Math.round(e.br_averagescore||0) }));
+  },
+  async flowReviews(runId){
+    const nav = CONFIG.navProps.reviewToInventory;
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.flowreview,
+      `?$select=br_name,br_score,br_passed,br_failed,br_warnings&$filter=_br_runid_value eq ${runId}`+
+      `&$expand=${nav}($select=br_name,br_environment,br_ownername,br_ownertype)&$orderby=br_score asc&$top=5000`);
+    return r.entities.map(e=>{ const inv=e[nav]||{};
+      return { id:e.br_flowreviewid, name:(inv.br_name||e.br_name), environment:inv.br_environment||'',
+        owner:inv.br_ownername||'', ownerType:fmt(inv,'br_ownertype')||'',
+        score:e.br_score||0, passed:e.br_passed||0, warnings:e.br_warnings||0, failed:e.br_failed||0 }; });
+  },
+  async severity(runId){
+    const fx = `<fetch aggregate='true'><entity name='br_reviewfinding'>`+
+      `<attribute name='br_reviewfindingid' alias='cnt' aggregate='count'/>`+
+      `<attribute name='br_severity' alias='sev' groupby='true'/>`+
+      `<link-entity name='br_flowreview' from='br_flowreviewid' to='br_flowreviewid'>`+
+      `<filter><condition attribute='br_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding, "?fetchXml="+encodeURIComponent(fx));
+    const out = { error:0, warning:0, info:0 };
+    r.entities.forEach(e=>{ const label=String(fmt(e,'sev')||'').toLowerCase(); const n=e.cnt||0;
+      if(label==='error'||label==='critical') out.error+=n; else if(label==='warning') out.warning+=n; else out.info+=n; });
+    return out;
+  },
+  async ruleCompliance(runId){
+    const fx = `<fetch aggregate='true'><entity name='br_reviewfinding'>`+
+      `<attribute name='br_reviewfindingid' alias='cnt' aggregate='count'/>`+
+      `<attribute name='br_rulecode' alias='code' groupby='true'/>`+
+      `<attribute name='br_status' alias='status' groupby='true'/>`+
+      `<link-entity name='br_flowreview' from='br_flowreviewid' to='br_flowreviewid'>`+
+      `<filter><condition attribute='br_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding, "?fetchXml="+encodeURIComponent(fx));
+    const agg = {};
+    r.entities.forEach(e=>{ const code=e.code; if(!code) return; const st=String(fmt(e,'status')||'').toLowerCase(); const n=e.cnt||0;
+      agg[code] = agg[code] || {pass:0,applicable:0};
+      if(st!=='not_applicable'){ agg[code].applicable+=n; if(st==='pass') agg[code].pass+=n; } });
+    return Object.keys(agg).map(code=>({ code, pct: agg[code].applicable? Math.round(agg[code].pass/agg[code].applicable*100):100 }))
+      .sort((a,b)=>a.pct-b.pct).slice(0,7);
+  },
+  async detail(flowReviewId){
+    const nav = CONFIG.navProps.reviewToInventory;
+    const fr = await XRM.WebApi.retrieveRecord(CONFIG.entities.flowreview, flowReviewId,
+      `?$select=br_name,br_score,br_passed,br_failed,br_warnings&$expand=${nav}($select=br_name,br_environment,br_ownername,br_ownertype,br_triggertype,br_actioncount,br_lastmodifiedon_src,br_definitionhash,br_flowid)`);
+    const inv = fr[nav]||{};
+    const fr2 = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding,
+      `?$select=br_rulecode,br_ruleid,br_status,br_severity,br_message,br_evidence,br_remediation,br_aigenerated&$filter=_br_flowreviewid_value eq ${flowReviewId}&$orderby=br_severity desc`);
+    const all = fr2.entities.map(e=>({ code:e.br_rulecode, name:(e['_br_ruleid_value@OData.Community.Display.V1.FormattedValue']||e.br_rulecode), status:String(fmt(e,'br_status')||'').toLowerCase(),
+      severity:String(fmt(e,'br_severity')||'info').toLowerCase(), message:e.br_message||'', evidence:e.br_evidence||'',
+      remediation:e.br_remediation||'', ai:!!e.br_aigenerated }));
+    return {
+      flowReviewId, name:inv.br_name||fr.br_name, environment:inv.br_environment||'', owner:inv.br_ownername||'',
+      ownerType:fmt(inv,'br_ownertype')||'', triggerType:inv.br_triggertype||'—', actionCount:inv.br_actioncount||0,
+      modifiedOn:inv.br_lastmodifiedon_src, hash:inv.br_definitionhash||'', flowId:inv.br_flowid||'',
+      score:fr.br_score||0, passed:fr.br_passed||0, warnings:fr.br_warnings||0, failed:fr.br_failed||0,
+      na: all.filter(f=>f.status==='not_applicable').length,
+      findings: all.filter(f=>!f.ai), ai: all.filter(f=>f.ai)
+    };
+  },
+  async rules(standardId){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.rule,
+      `?$select=br_name,br_code,br_category,br_evaluator,br_severity,br_enabled,br_weight,br_parametersjson,br_description&$filter=_br_standardid_value eq ${standardId}&$orderby=br_weight desc`);
+    return r.entities.map(e=>({ id:e.br_reviewruleid, code:e.br_code, name:e.br_name, cat:fmt(e,'br_category')||'',
+      sev:String(fmt(e,'br_severity')||'info').toLowerCase(), w:e.br_weight||1, p:e.br_parametersjson||'{}',
+      desc:e.br_description||'', on:!!e.br_enabled }));
+  },
+  async createRule(standardId, r){
+    const rec = { br_name:r.name, br_code:r.code, br_evaluator:r.eval, br_weight:r.w,
+      br_enabled:r.on, br_parametersjson:r.p, br_description:r.desc, br_remediation:r.rem,
+      br_category:CHOICES.category[r.cat], br_severity:CHOICES.severity[r.sev] };
+    rec[`${CONFIG.navProps.ruleToStandard}@odata.bind`] = `/${CONFIG.entities.standard}s(${standardId})`;
+    const res = await XRM.WebApi.createRecord(CONFIG.entities.rule, rec);
+    return res.id;
+  },
+  async setRuleEnabled(id, on){ await XRM.WebApi.updateRecord(CONFIG.entities.rule, id, { br_enabled:on }); },
+  async queueOnDemand(standardId, flowId, flowName, user){
+    const rec = { br_name:`On-demand · ${flowName} · ${new Date().toISOString()}`,
+      br_status:CHOICES.runStatus.Queued, br_triggersource:CHOICES.triggerSrc.ondemand,
+      br_targetflowid:flowId, br_triggeredby:user||'' };
+    if(standardId) rec[`${CONFIG.navProps.ruleToStandard}@odata.bind`] = `/${CONFIG.entities.standard}s(${standardId})`;
+    const res = await XRM.WebApi.createRecord(CONFIG.entities.run, rec);
+    return res.id;
+  },
+  async runOutcome(runId){
+    const r = await XRM.WebApi.retrieveRecord(CONFIG.entities.run, runId, "?$select=br_status,br_completedon");
+    return { status:String(fmt(r,'br_status')||'').toLowerCase(), done:!!r.br_completedon };
+  },
+  async latestReviewForFlow(flowId){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.flowreview,
+      `?$select=br_flowreviewid&$filter=${CONFIG.navProps.reviewToInventory}/br_flowid eq '${flowId}'&$orderby=createdon desc&$top=1`);
+    return r.entities[0] && r.entities[0].br_flowreviewid;
+  }
+};
+
+/* ---- DEMO data source (sample data; no Dataverse) ---- */
+const DEMO_FLOWS = [
+  {id:'d1',name:"Copy of Send Weekly Digest",environment:"CMA — Dev",owner:"g.thomas@cma.ca",ownerType:"user",score:31,passed:1,warnings:2,failed:4},
+  {id:'d2',name:"Membership Renewal Reminder",environment:"CMA — Production",owner:"svc-membership",ownerType:"application",score:48,passed:2,warnings:2,failed:3},
+  {id:'d3',name:"CMA - Finance - Nightly Invoice Sync",environment:"CMA — Production",owner:"svc-finance",ownerType:"application",score:63,passed:3,warnings:3,failed:2},
+  {id:'d4',name:"CMA - Membership - Add new Roles on Contact Creation",environment:"CMA — Production",owner:"svc-membership",ownerType:"application",score:78,passed:4,warnings:2,failed:1},
+  {id:'d5',name:"CMA - Marketing - Event Reminder",environment:"CMA — UAT",owner:"svc-marketing",ownerType:"application",score:82,passed:5,warnings:1,failed:1},
+  {id:'d6',name:"CMA - System - Validate Logger",environment:"CMA — Production",owner:"svc-system",ownerType:"application",score:96,passed:8,warnings:0,failed:0}
+];
+const DEMO_DETAIL = {
+  environment:"CMA — Production", owner:"svc-membership", ownerType:"application",
+  triggerType:"Dataverse · On Create (Contact)", actionCount:34, modifiedOn:"2026-07-29T00:00:00Z", hash:"9f3c…a1e",
+  findings:[
+    {code:"NAMING_CONVENTION",status:"pass",severity:"error",message:'Name matches "<Prefix> - <Area> - <Function>".'},
+    {code:"ERROR_HANDLING_SCOPES",status:"fail",severity:"error",message:'"Finally" scope is missing; "Catch" runs after "Try" only on Failed, not TimedOut/Skipped.',evidence:'actions.Catch.runAfter = { "Try": ["Failed"] }   // expected: ["Failed","TimedOut","Skipped"]',remediation:'Add a "Finally" Scope running after "Catch" on all outcomes, and add TimedOut + Skipped to the Catch runAfter.'},
+    {code:"LOGGING_PRESENT",status:"pass",severity:"warning",message:'Calls "CMA - System - Validate Logger" from the Catch scope.'},
+    {code:"CONFIG_LIST_TOP",status:"warning",severity:"warning",message:'1 of 3 "List rows" actions has no Row Count set.',evidence:'actions.List_active_roles.inputs · missing $top / Top Count',remediation:'Set a Row Count on "List active roles". Load the Flow Configuration record with Row Count = 1.'},
+    {code:"APPROVED_EMAIL_SENDER",status:"pass",severity:"error",message:'Send email uses Office 365 connection; no personal From detected.'},
+    {code:"RUN_AS_SERVICE_PRINCIPAL",status:"warning",severity:"warning",message:'Verify svc-membership is an application user governed by App-Membership.',remediation:'Confirm the flow runs as an application user, not a named user.'},
+    {code:"NO_HARDCODED_ENV",status:"pass",severity:"warning",message:'No per-environment URLs or GUIDs found in action parameters.'}
+  ],
+  ai:[
+    {severity:"info",tag:"INTENT",message:'Three actions retain default names (Compose 2, Apply to each 3). Rename for readability.'},
+    {severity:"warning",tag:"EDGE CASE",message:'The Apply to each over new roles has no guard for an empty collection.'},
+    {severity:"info",tag:"EFFICIENCY",message:'Two sequential List rows calls query the same Contact table; merge into one filtered query.'}
+  ]
+};
+const DEMO_RULES = [
+  {id:'r1',code:"NAMING_CONVENTION",name:"Flow naming convention",desc:"Name matches <Prefix> - <Area> - <Function>; prefix drives WatchFox.",cat:"Naming",sev:"error",w:3,p:'{"prefix":"CMA","separator":" - ","minSegments":3}',on:true},
+  {id:'r2',code:"ERROR_HANDLING_SCOPES",name:"Try/Catch/Finally error handling",desc:"Scopes wired with configure-run-after; highest-signal check.",cat:"ErrorHandling",sev:"error",w:3,p:'{"tryName":"Try","catchName":"Catch","finallyName":"Finally","requireFinally":true}',on:true},
+  {id:'r3',code:"LOGGING_PRESENT",name:"Long-term logging present",desc:"Calls the shared logger child flow (28-day retention workaround).",cat:"Logging",sev:"warning",w:2,p:'{"loggerNameContains":["Logger","Validate Logger"]}',on:true},
+  {id:'r4',code:"CONFIG_LIST_TOP",name:"Bounded list queries",desc:"Every List rows action sets a Row Count / $top.",cat:"Configuration",sev:"warning",w:1,p:'{"listOperationIds":["ListRecords"],"topParamNames":["$top","top"]}',on:true},
+  {id:'r5',code:"APPROVED_EMAIL_SENDER",name:"Approved email sender",desc:"Outbound email uses the licensed no-reply connection.",cat:"Email",sev:"error",w:2,p:'{"approvedSenders":["appdev-no-reply@cma.ca"]}',on:true},
+  {id:'r6',code:"RUN_AS_SERVICE_PRINCIPAL",name:"Runs as service principal",desc:"Flow runs as an application principal, not a named user.",cat:"Security",sev:"warning",w:2,p:'{}',on:true},
+  {id:'r7',code:"NO_HARDCODED_ENV",name:"No hard-coded environment values",desc:"Per-env URLs/GUIDs belong in the Flow Configuration table.",cat:"Configuration",sev:"warning",w:1,p:'{"guidCheck":true}',on:true},
+  {id:'r8',code:"AI_REVIEW",name:"AI holistic review",desc:"Azure OpenAI pass for intent, readability, edge cases.",cat:"General",sev:"info",w:1,p:'{}',on:true}
+];
+const DEMO_STD = { id:'s1', name:"CMA Power Automate Delivery Standard", code:"CMA-PA-STD", version:"1.0.0", active:true,
+  text:'Cloud flows are named "CMA - <Area> - <Function>". Flows run as application/service principals, never user principals. Environment-specific configuration is loaded from the CMA Flow Configuration table (Row Count = 1), not hard-coded. Errors are logged to the CMA Flow Logs table via the shared logger child flow. Error handling uses Try/Catch/Finally scopes wired with "configure run after". Email is sent from appdev-no-reply@cma.ca, never a personal account.' };
+
+const Demo = {
+  _rules: DEMO_RULES.slice(),
+  async meta(){ return { live:false, env:'CMA — Production (sample)', user:'Preview' }; },
+  async activeStandard(){ return {...DEMO_STD}; },
+  async recentRuns(){ return [
+    { id:'run1', name:'Crawl', completedOn:'2026-08-04T02:00:00Z', flowsScanned:312, findingsCount:1204, avgScore:74 },
+    { id:'run0', name:'Crawl', completedOn:'2026-08-03T02:00:00Z', flowsScanned:311, findingsCount:1347, avgScore:68 } ]; },
+  async flowReviews(){ return DEMO_FLOWS.slice(); },
+  async severity(){ return { error:361, warning:554, info:289 }; },
+  async ruleCompliance(){ return [
+    {code:"ERROR_HANDLING_SCOPES",pct:54},{code:"LOGGING_PRESENT",pct:66},{code:"NO_HARDCODED_ENV",pct:69},
+    {code:"NAMING_CONVENTION",pct:71},{code:"CONFIG_LIST_TOP",pct:74},{code:"RUN_AS_SERVICE_PRINCIPAL",pct:80},{code:"APPROVED_EMAIL_SENDER",pct:88} ]; },
+  async detail(flowReviewId){ const fl = DEMO_FLOWS.find(f=>f.id===flowReviewId) || DEMO_FLOWS[3];
+    return { flowReviewId:fl.id, name:fl.name, ...DEMO_DETAIL, environment:fl.environment, owner:fl.owner, ownerType:fl.ownerType,
+      score:fl.score, passed:fl.passed, warnings:fl.warnings, failed:fl.failed,
+      na: DEMO_DETAIL.findings.filter(f=>f.status==='not_applicable').length + 1 }; },
+  async rules(){ return this._rules.slice(); },
+  async createRule(_std, r){ const id='new'+Date.now(); this._rules.unshift({ id, ...r, desc:r.desc||'—' }); return id; },
+  async setRuleEnabled(id,on){ const r=this._rules.find(x=>x.id===id); if(r) r.on=on; },
+  async queueOnDemand(){ return 'demo-run'; },
+  async runOutcome(){ return { status:'completed', done:true }; },
+  async latestReviewForFlow(){ return null; }
+};
+
+const DS = LIVE ? Live : Demo;
+
+/* ============================ TOAST / UI HELPERS ============================ */
+function toast(msg, kind){
+  const wrap=document.getElementById('toasts');
+  const el=document.createElement('div'); el.className='toast'+(kind==='err'?' err':'');
+  el.innerHTML = (kind==='err'
+    ? '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h.01"/></svg>'
+    : '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 10 4 4 8-9"/></svg>') + '<span>'+esc(msg)+'</span>';
+  wrap.appendChild(el); setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3200);
+}
+function donut(segments, centerTop, centerBottom, size){
+  const total = segments.reduce((s,x)=>s+x.v,0) || 1;
+  let off = 25, rings='';
+  segments.forEach(seg=>{ const pct = seg.v/total*100;
+    rings += `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${seg.c}" stroke-width="5" stroke-dasharray="${pct.toFixed(2)} ${(100-pct).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"/>`;
+    off -= pct; });
+  return `<svg class="donut" viewBox="0 0 42 42" style="width:${size}px;height:${size}px" aria-hidden="true">
+    <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--panel-2)" stroke-width="5"/>${rings}
+    <text x="21" y="20.5" text-anchor="middle" font-size="7" font-weight="800" fill="var(--text)" font-family="var(--font-mono)">${centerTop}</text>
+    <text x="21" y="26" text-anchor="middle" font-size="3" fill="var(--faint)">${centerBottom}</text></svg>`;
+}
+
+/* ============================ RENDER: DASHBOARD ============================ */
+let DASH_LOADED=false;
+async function loadDashboard(){
+  if(DASH_LOADED) return; DASH_LOADED=true;
+  try{
+    const std = await DS.activeStandard();
+    const runs = await DS.recentRuns();
+    if(!runs.length){ document.getElementById('dashSub').textContent='No completed review runs yet.';
+      document.getElementById('kpis').innerHTML='';
+      document.getElementById('flowRows').innerHTML='<tr><td colspan="4"><div class="empty"><h3>No runs yet</h3>Run the Crawl Orchestrator to populate the dashboard.</div></td></tr>';
+      return; }
+    const run = runs[0], prev = runs[1];
+    const flows = await DS.flowReviews(run.id);
+    const [sev, ruleComp] = await Promise.all([ DS.severity(run.id), DS.ruleCompliance(run.id) ]);
+    const compliant = flows.filter(f=>f.score>=CONFIG.complianceThreshold).length;
+
+    document.getElementById('dashSub').innerHTML =
+      `${run.flowsScanned} cloud flows reviewed · standard <b>${esc(std?std.name:'—')}${std&&std.version?' v'+esc(std.version):''}</b>`;
+    document.getElementById('lastCrawl').textContent = `Last crawl ${shortDate(run.completedOn)}`;
+
+    const delta = (cur,pr,unit,goodUp)=>{ if(pr==null) return '<span class="delta flat">—</span>';
+      const d=cur-pr; if(d===0) return '<span class="delta flat">no change</span>';
+      const up=d>0, good = goodUp?up:!up; const arrow=up?'▲':'▼';
+      return `<span class="delta ${good?'up':'down'}">${arrow} ${Math.abs(d)}${unit} vs prev</span>`; };
+    document.getElementById('kpis').innerHTML = `
+      <div class="card kpi"><div class="label"><svg viewBox="0 0 20 20" width="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 16V9M8 16V4M13 16v-6M18 16V7"/></svg>Average score</div>
+        <div class="val">${run.avgScore}<small>/100</small></div>${delta(run.avgScore, prev&&prev.avgScore, ' pts', true)}</div>
+      <div class="card kpi"><div class="label">Compliant flows</div>
+        <div class="val">${compliant}<small>/${flows.length}</small></div><span class="delta flat">≥ ${CONFIG.complianceThreshold} score</span></div>
+      <div class="card kpi"><div class="label">Open findings</div>
+        <div class="val">${run.findingsCount.toLocaleString()}</div>${delta(run.findingsCount, prev&&prev.findingsCount, '', false)}</div>
+      <div class="card kpi"><div class="label">Error-severity gaps</div>
+        <div class="val" style="color:var(--bad)">${sev.error}</div><span class="delta flat">across all flows</span></div>`;
+
+    document.getElementById('flowRows').innerHTML = flows.slice(0,8).map(fl=>{
+      const g=gradeFor(fl.score); const bad = fl.ownerType && fl.ownerType.toLowerCase()==='user';
+      return `<tr data-id="${esc(fl.id)}">
+        <td><div class="flow-name">${esc(fl.name)}</div><div class="flow-env">${esc(fl.environment)}</div></td>
+        <td><span class="mono" style="font-size:12px;color:${bad?'var(--bad)':'var(--muted)'}">${esc(fl.owner||'—')}</span></td>
+        <td><div class="score-cell"><span class="grade ${g}">${g}</span><div><div class="mono" style="font-weight:700">${fl.score}</div>
+          <div class="bar"><i style="width:${fl.score}%;background:${scoreColor(fl.score)}"></i></div></div></div></td>
+        <td><div class="findpills"><span class="fp" style="background:var(--good-bg);color:var(--good)">${fl.passed}✓</span>
+          <span class="fp" style="background:var(--warn-bg);color:var(--warn)">${fl.warnings}!</span>
+          <span class="fp" style="background:var(--bad-bg);color:var(--bad)">${fl.failed}✕</span></div></td></tr>`;
+    }).join('');
+
+    const total = sev.error+sev.warning+sev.info;
+    document.getElementById('sevWrap').innerHTML =
+      donut([{v:sev.error,c:'var(--bad)'},{v:sev.warning,c:'var(--warn)'},{v:sev.info,c:'var(--info)'}], total.toLocaleString(), 'FINDINGS', 118) +
+      `<div class="sev-list">
+        <div class="sev-item"><span class="swatch" style="background:var(--bad)"></span>Error <span class="n">${sev.error}</span></div>
+        <div class="sev-item"><span class="swatch" style="background:var(--warn)"></span>Warning <span class="n">${sev.warning}</span></div>
+        <div class="sev-item"><span class="swatch" style="background:var(--info)"></span>Info <span class="n">${sev.info}</span></div></div>`;
+
+    document.getElementById('ruleLegend').innerHTML = ruleComp.map(r=>{
+      const col=r.pct>=80?'var(--good)':r.pct>=60?'var(--warn)':'var(--bad)';
+      return `<div class="legrow"><span class="k mono">${esc(r.code.replace(/_/g,' '))}</span>
+        <span class="track"><i style="width:${r.pct}%;background:${col}"></i></span>
+        <span class="n" style="color:${col}">${r.pct}%</span></div>`; }).join('');
+  }catch(err){ DASH_LOADED=false; console.error(err); toast('Could not load dashboard: '+(err.message||err), 'err'); }
+}
+
+/* ============================ RENDER: FLOW DETAIL ============================ */
+async function openDetail(flowReviewId){
+  switchView('flow');
+  const host=document.getElementById('detailHost');
+  host.innerHTML='<div class="card empty"><span class="spin"></span> Loading review…</div>';
+  try{
+    const d = await DS.detail(flowReviewId);
+    const g=gradeFor(d.score);
+    const counts = { pass:d.passed, warn:d.warnings, fail:d.failed, na:d.na };
+    const findHtml = d.findings.map(f=>{
+      const stKey = f.status==='fail'?'fail':f.status==='warning'?'warn':f.status==='not_applicable'?'na':'pass';
+      const stTxt = {fail:'FAIL',warn:'WARN',na:'N/A',pass:'PASS'}[stKey];
+      return `<div class="finding ${stKey==='na'?'na':''}"><div class="fstatus">
+        <span class="chip ${stKey}">${stTxt}</span><span class="sev ${esc(f.severity)}">${esc(f.severity)}</span><span class="rcode">${esc(f.code)}</span></div>
+        <div><h4>${esc(f.name)}</h4><div class="msg">${esc(f.message)}</div>
+        ${f.evidence?`<div class="evidence"><span class="lbl">evidence › </span>${esc(f.evidence)}</div>`:''}
+        ${f.remediation?`<div class="remediation"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 3v4M10 13v4M3 10h4M13 10h4"/></svg><span>${esc(f.remediation)}</span></div>`:''}</div></div>`;
+    }).join('') || '<div class="empty">No findings recorded.</div>';
+
+    const aiHtml = d.ai.length ? `<div class="card ai-block">
+      <div class="card-h"><h3 style="display:flex;align-items:center;gap:9px"><span class="chip ai"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3l2 4 4 1-3 3 .6 4-3.6-2-3.6 2 .6-4-3-3 4-1z"/></svg>AI holistic review</span></h3><span class="meta">advisory · Azure OpenAI</span></div>
+      <div class="pad" style="padding-top:6px">${d.ai.map(o=>`<div class="ai-obs"><span class="chip ${o.severity==='warning'?'warn':'info'} tag">${esc(o.tag||o.severity.toUpperCase())}</span><span>${esc(o.message)}</span></div>`).join('')}</div></div>` : '';
+
+    host.innerHTML = `
+      <div class="card pad" style="margin-bottom:14px">
+        <div class="fr-head">
+          <div class="fr-title">
+            <div class="crumb" id="backToDash">← Dashboard</div>
+            <h2>${esc(d.name)}</h2>
+            <div class="fr-metaline">
+              <span class="k"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M3 8h14"/></svg>Env <b>${esc(d.environment||'—')}</b></span>
+              <span class="k"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="7" r="3"/><path d="M4 16a6 6 0 0 1 12 0"/></svg>Owner <b>${esc(d.owner||'—')}${d.ownerType?` (${esc(d.ownerType)})`:''}</b></span>
+              <span class="k"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5h12v11H4z"/><path d="M4 9h12"/></svg>Trigger <b>${esc(d.triggerType||'—')}</b></span>
+              <span class="k"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 6h14M3 10h9M3 14h12"/></svg><b>${d.actionCount||0}</b> actions</span>
+              <span class="k"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>Modified <b>${d.modifiedOn?new Date(d.modifiedOn).toLocaleDateString():'—'}</b></span>
+            </div>
+          </div>
+          <div class="scorecard">
+            ${donut([{v:d.score,c:scoreColor(d.score)},{v:100-d.score,c:'var(--panel-2)'}], d.score, 'SCORE · '+g, 96)}
+            <div class="counts">
+              <div><span class="chip pass">PASS</span><b>${counts.pass}</b></div>
+              <div><span class="chip warn">WARN</span><b>${counts.warn}</b></div>
+              <div><span class="chip fail">FAIL</span><b>${counts.fail}</b></div>
+              <div><span class="chip na">N/A</span><b>${counts.na}</b></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; gap:9px; margin-top:16px; flex-wrap:wrap">
+          <button class="btn primary" id="runNowBtn" data-flow="${esc(d.flowId)}" data-name="${esc(d.name)}"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M6 4l10 6-10 6z"/></svg>Run review now</button>
+          ${d.hash?`<span class="mono" style="margin-left:auto; align-self:center; font-size:11.5px; color:var(--faint)">definition hash <span style="color:var(--muted)">${esc(d.hash)}</span></span>`:''}
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><h3>Findings · ${d.findings.length} rules evaluated</h3></div>
+        <div class="findings">${findHtml}</div>
+      </div>
+      ${aiHtml}`;
+
+    document.getElementById('backToDash').addEventListener('click',()=>switchView('dash'));
+    const runBtn = document.getElementById('runNowBtn');
+    if(runBtn) runBtn.addEventListener('click',()=>runReviewNow(runBtn));
+  }catch(err){ console.error(err); host.innerHTML='<div class="card empty"><h3>Could not load review</h3>'+esc(err.message||err)+'</div>'; }
+}
+
+/* on-demand review: create a Queued run and poll until the flow finishes it */
+async function runReviewNow(btn){
+  const flowId=btn.dataset.flow, flowName=btn.dataset.name;
+  if(LIVE && !flowId){ toast('This flow has no stored flow id to target.', 'err'); return; }
+  btn.disabled=true; const original=btn.innerHTML; btn.innerHTML='<span class="spin"></span> Queued…';
+  try{
+    const std = await DS.activeStandard();
+    const meta = await DS.meta();
+    const runId = await DS.queueOnDemand(std&&std.id, flowId, flowName, meta.user);
+    if(!LIVE){ toast('Preview mode — a live run would be queued here.'); btn.disabled=false; btn.innerHTML=original; return; }
+    toast('Review queued — waiting for the flow to finish…');
+    btn.innerHTML='<span class="spin"></span> Running…';
+    const started=Date.now();
+    const poll=async()=>{
+      const o = await DS.runOutcome(runId);
+      if(o.done || o.status==='completed' || o.status==='failed'){
+        if(o.status==='failed'){ toast('The review run failed — check the flow run history.', 'err'); btn.disabled=false; btn.innerHTML=original; return; }
+        toast('Review complete — refreshing.');
+        const fr = await DS.latestReviewForFlow(flowId);
+        DASH_LOADED=false;
+        if(fr) openDetail(fr); else { btn.disabled=false; btn.innerHTML=original; }
+        return;
+      }
+      if(Date.now()-started > CONFIG.poll.timeoutMs){ toast('Still running — check back shortly.'); btn.disabled=false; btn.innerHTML=original; return; }
+      setTimeout(poll, CONFIG.poll.intervalMs);
+    };
+    setTimeout(poll, CONFIG.poll.intervalMs);
+  }catch(err){ console.error(err); toast('Could not queue review: '+(err.message||err), 'err'); btn.disabled=false; btn.innerHTML=original; }
+}
+
+/* ============================ RENDER: STANDARD & RULES ============================ */
+let STD_LOADED=false, ACTIVE_STD=null, RULES=[];
+async function loadStandard(){
+  if(STD_LOADED) return; STD_LOADED=true;
+  try{
+    ACTIVE_STD = await DS.activeStandard();
+    if(!ACTIVE_STD){ document.getElementById('stdName').textContent='No active standard';
+      document.getElementById('ruleRows').innerHTML='<tr><td colspan="6"><div class="empty">Create a Review Standard and mark it active.</div></td></tr>'; return; }
+    document.getElementById('stdName').textContent = ACTIVE_STD.name;
+    document.getElementById('stdText').textContent = ACTIVE_STD.text;
+    document.getElementById('stdActive').classList.toggle('off', !ACTIVE_STD.active);
+    RULES = await DS.rules(ACTIVE_STD.id);
+    document.getElementById('stdMeta').innerHTML =
+      `<span class="k">Code <b class="mono">${esc(ACTIVE_STD.code||'—')}</b></span>
+       <span class="k">Version <b class="mono">${esc(ACTIVE_STD.version||'—')}</b></span>
+       <span class="k">Rules <b class="rulecount">${RULES.length}</b></span>`;
+    renderRules();
+  }catch(err){ STD_LOADED=false; console.error(err); toast('Could not load standard: '+(err.message||err), 'err'); }
+}
+function renderRules(hl){
+  document.getElementById('ruleRows').innerHTML = RULES.map(r=>`
+    <tr class="${r.code===hl?'justAdded':''}">
+      <td><button class="toggle ${r.on?'':'off'}" data-id="${esc(r.id)}" aria-label="rule enabled"></button></td>
+      <td><div class="rname">${esc(r.name)}</div><div class="rdesc">${esc(r.desc)}</div><div class="rcode mono" style="font-size:10.5px;color:var(--faint);margin-top:4px">${esc(r.code)}</div></td>
+      <td><span class="mono" style="font-size:11.5px;color:var(--muted)">${esc(r.cat)}</span></td>
+      <td><span class="sev ${['error','warning','info','critical'].includes(r.sev)?r.sev:'info'}">${esc(r.sev)}</span></td>
+      <td><span class="weight">${[1,2,3].map(i=>`<i class="${i<=r.w?'on':''}"></i>`).join('')}</span></td>
+      <td><div class="params">${esc(r.p)}</div></td></tr>`).join('');
+  document.querySelectorAll('.rulecount').forEach(el=>el.textContent=RULES.length);
+}
+document.getElementById('ruleRows').addEventListener('click', async e=>{
+  const t=e.target.closest('.toggle'); if(!t) return;
+  const r=RULES.find(x=>String(x.id)===t.dataset.id); if(!r) return;
+  const next=!r.on;
+  try{ await DS.setRuleEnabled(r.id, next); r.on=next; renderRules(); toast(`Rule ${next?'enabled':'disabled'}.`); }
+  catch(err){ console.error(err); toast('Could not update rule: '+(err.message||err), 'err'); }
+});
+
+/* ============================ ADD-RULE MODAL ============================ */
+const $=id=>document.getElementById(id);
+const modal=$('ruleModal');
+let newWeight=2, newEnabled=true;
+$('addRuleBtn').addEventListener('click',()=>{ if(!ACTIVE_STD && LIVE){ toast('No active standard to add the rule to.','err'); return; } modal.hidden=false; $('f-name').focus(); });
+$('rmClose').addEventListener('click',()=>modal.hidden=true);
+$('rmCancel').addEventListener('click',()=>modal.hidden=true);
+modal.addEventListener('click',e=>{ if(e.target===modal) modal.hidden=true; });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !modal.hidden) modal.hidden=true; });
+$('f-weight').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+  $('f-weight').querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); newWeight=+b.dataset.w; });
+$('f-enabled').addEventListener('click',()=>{ newEnabled=!newEnabled; $('f-enabled').classList.toggle('off',!newEnabled); });
+function resetForm(){ ['f-name','f-code','f-desc','f-rem'].forEach(id=>$(id).value=''); $('f-params').value='{}';
+  $('f-sev').value='warning'; $('f-cat').value='Configuration'; $('f-eval').value='configListTop';
+  newWeight=2; $('f-weight').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.w==='2'));
+  newEnabled=true; $('f-enabled').classList.remove('off'); $('f-req-err').classList.remove('show'); $('f-params-err').classList.remove('show'); }
+$('rmSave').addEventListener('click', async ()=>{
+  const name=$('f-name').value.trim(); const code=$('f-code').value.trim().toUpperCase().replace(/\s+/g,'_');
+  $('f-req-err').classList.remove('show'); $('f-params-err').classList.remove('show');
+  if(!name||!code){ $('f-req-err').classList.add('show'); return; }
+  const params=$('f-params').value.trim()||'{}';
+  try{ JSON.parse(params); }catch(_){ $('f-params-err').classList.add('show'); return; }
+  const payload={ code, name, desc:$('f-desc').value.trim()||'—', cat:$('f-cat').value, sev:$('f-sev').value,
+    eval:$('f-eval').value, w:newWeight, p:params, on:newEnabled, rem:$('f-rem').value.trim() };
+  const saveBtn=$('rmSave'); saveBtn.disabled=true; saveBtn.textContent='Saving…';
+  try{
+    const id = await DS.createRule(ACTIVE_STD&&ACTIVE_STD.id, payload);
+    RULES.unshift({ id, code, name, desc:payload.desc, cat:payload.cat, sev:payload.sev, w:payload.w, p:payload.p, on:payload.on });
+    renderRules(code); modal.hidden=true; resetForm(); toast('Rule added to the standard.');
+    document.getElementById('ruleRows').firstElementChild?.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(err){ console.error(err); toast('Could not create rule: '+(err.message||err), 'err'); }
+  finally{ saveBtn.disabled=false; saveBtn.textContent='Save & add to standard'; }
+});
+
+/* ============================ TABS / THEME / INIT ============================ */
+function switchView(v){
+  document.querySelectorAll('.segmented button').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  if(v==='std') loadStandard();
+}
+document.querySelectorAll('.segmented button').forEach(b=> b.addEventListener('click',()=>switchView(b.dataset.view)));
+document.getElementById('flowRows').addEventListener('click',e=>{ const tr=e.target.closest('tr[data-id]'); if(tr) openDetail(tr.dataset.id); });
+const rootEl=document.documentElement;
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  const cur=rootEl.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  rootEl.setAttribute('data-theme',cur==='dark'?'light':'dark'); });
+
+(async function init(){
+  const meta = await DS.meta();
+  document.getElementById('envPill').textContent = meta.env;
+  const pill=document.getElementById('statusPill');
+  pill.className = 'statuspill '+(meta.live?'live':'preview');
+  pill.innerHTML = `<span class="dot"></span>${meta.live?'Live':'Preview'}`;
+  await loadDashboard();
+  // deep-link: ?flowReviewId=<guid> opens a specific review
+  const q = new URLSearchParams(location.search);
+  const deep = q.get('flowReviewId') || q.get('id');
+  if(deep) openDetail(deep);
+})();
+</script>

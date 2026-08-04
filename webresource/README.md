@@ -50,19 +50,21 @@ Open the file and edit the `CONFIG` and `CHOICES` blocks at the top of the
   set them here (Web API → `$metadata` shows the exact `NavigationProperty`).
 - `poll` — interval/timeout for the **Run review now** wait.
 
-### `CHOICES` — required for writes
-Local (per-table) choice columns get **environment-specific integer values**,
-often like `121570000`. Reads use OData **formatted values** and don't need
-these, but **writes do**. Set the four maps to match your published values:
+### `CHOICES` — used for writes
+Reads use OData **formatted values** (no config); **writes** (creating a rule,
+queuing an on-demand run) need the choice **integers**.
 
-- `category`, `severity` — used when **creating a rule**.
-- `runStatus.Queued`, `triggerSrc.ondemand` — used when **queuing an on-demand
-  run**.
+**If you imported the shipped solution** ([`solution/package`](../solution/package)),
+the global choices have deterministic values — `severity` Info=1/Warning=2/…,
+`runStatus` Queued=1/…, `triggerSrc` schedule=1/ondemand=2, `category`
+Naming=1/… — and the default `CHOICES` block **already matches them**. Nothing
+to change.
 
-Find the values in the maker portal (each choice's option list) or via the Web
-API: `GET [org]/api/data/v9.2/GlobalOptionSetDefinitions` /
-`EntityDefinitions(LogicalName='br_reviewrun')/Attributes`. If a write fails
-with a choice error, these are the cause.
+**If you authored the choices by hand instead**, they'll get
+environment-specific integers (often `121570000`); set the four maps to match.
+Find the values in the maker portal (each choice's option list) or via
+`GET [org]/api/data/v9.2/GlobalOptionSetDefinitions`. A write that fails with a
+choice error means these are off.
 
 ## Register and surface it
 

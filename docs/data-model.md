@@ -17,6 +17,9 @@ Review Run ─1──*─ Flow Review ─1──*─ Review Finding
 ### Review Standard (`br_reviewstandard`)
 A named, versioned bundle of rules. `br_standardtext` holds the human-readable
 standard and is passed to the AI reviewer as context. Mark one `br_isactive`.
+`br_reviewallflows` controls crawl scope: off (default) reviews only activated
+flows; on reviews every flow including draft/suspended ones. It is toggled from
+the web resource's Standard & Rules tab and read by the Crawl Orchestrator.
 
 ### Review Rule (`br_reviewrule`)
 One configurable criterion. The engine maps `br_evaluator` to a deterministic

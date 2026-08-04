@@ -272,6 +272,11 @@
 
   @media (max-width:880px){ .split,.kpis{grid-template-columns:1fr 1fr} .fr-head{flex-direction:column} .scorecard{width:auto} }
   @media (max-width:560px){ .kpis{grid-template-columns:1fr} .finding{grid-template-columns:1fr} }
+  .tip{position:relative;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--border-strong);color:var(--faint);font-size:10px;font-weight:700;cursor:help;margin-left:6px}
+  .tip:hover,.tip:focus{color:var(--accent);border-color:var(--accent);outline:none}
+  .tip .tiptext{position:absolute;bottom:150%;right:0;background:var(--text);color:var(--bg);font-size:11.5px;font-weight:500;line-height:1.5;padding:9px 11px;border-radius:8px;width:240px;text-align:left;opacity:0;visibility:hidden;transition:opacity .15s;box-shadow:0 10px 28px rgba(0,0,0,.28);z-index:50}
+  .tip .tiptext b{color:var(--bg)}
+  .tip:hover .tiptext,.tip:focus .tiptext{opacity:1;visibility:visible}
 </style>
 
 <div class="shell">
@@ -342,10 +347,15 @@
           <div class="fr-metaline" style="margin-top:8px" id="stdMeta"></div>
           <div class="std-text" id="stdText"></div>
         </div>
-        <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end">
-          <span class="eyebrow">Active</span>
-          <button class="toggle" id="stdActive" aria-label="Standard is active"></button>
-          <span class="mono" style="font-size:11px;color:var(--faint)">passed to AI as context</span>
+        <div style="display:flex; flex-direction:column; gap:14px; align-items:flex-end">
+          <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">
+            <span class="eyebrow">Active</span>
+            <button class="toggle" id="stdActive" aria-label="Standard is active"></button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">
+            <span class="eyebrow">Review all flows <span class="tip" tabindex="0">?<span class="tiptext"><b>On</b> — the nightly crawl reviews every flow, including turned-off (draft / suspended) ones. <b>Off</b> — only activated flows are reviewed.</span></span></span>
+            <button class="toggle off" id="stdAllFlows" aria-label="Review all flows"></button>
+          </div>
         </div>
       </div>
     </div>
@@ -470,11 +480,12 @@ const Live = {
   },
   async activeStandard(){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,
-      "?$select=br_name,br_code,br_version,br_standardtext,br_isactive&$filter=br_isactive eq true&$top=1");
+      "?$select=br_name,br_code,br_version,br_standardtext,br_isactive,br_reviewallflows&$filter=br_isactive eq true&$top=1");
     const s = r.entities[0];
     if(!s) return null;
-    return { id:s.br_reviewstandardid, name:s.br_name, code:s.br_code, version:s.br_version, text:s.br_standardtext||'', active:!!s.br_isactive };
+    return { id:s.br_reviewstandardid, name:s.br_name, code:s.br_code, version:s.br_version, text:s.br_standardtext||'', active:!!s.br_isactive, reviewAllFlows:!!s.br_reviewallflows };
   },
+  async updateStandard(id, patch){ await XRM.WebApi.updateRecord(CONFIG.entities.standard, id, patch); },
   async recentRuns(){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,
       "?$select=br_name,br_completedon,br_flowsscanned,br_findingscount,br_averagescore&$filter=br_completedon ne null&$orderby=br_completedon desc&$top=2");
@@ -609,13 +620,14 @@ const DEMO_RULES = [
   {id:'r7',code:"NO_HARDCODED_ENV",name:"No hard-coded environment values",desc:"Per-env URLs/GUIDs belong in the Flow Configuration table.",cat:"Configuration",sev:"warning",w:1,p:'{"guidCheck":true}',on:true},
   {id:'r8',code:"AI_REVIEW",name:"AI holistic review",desc:"Azure OpenAI pass for intent, readability, edge cases.",cat:"General",sev:"info",w:1,p:'{}',on:true}
 ];
-const DEMO_STD = { id:'s1', name:"CMA Power Automate Delivery Standard", code:"CMA-PA-STD", version:"1.0.0", active:true,
+const DEMO_STD = { id:'s1', name:"CMA Power Automate Delivery Standard", code:"CMA-PA-STD", version:"1.0.0", active:true, reviewAllFlows:false,
   text:'Cloud flows are named "CMA - <Area> - <Function>". Flows run as application/service principals, never user principals. Environment-specific configuration is loaded from the CMA Flow Configuration table (Row Count = 1), not hard-coded. Errors are logged to the CMA Flow Logs table via the shared logger child flow. Error handling uses Try/Catch/Finally scopes wired with "configure run after". Email is sent from appdev-no-reply@cma.ca, never a personal account.' };
 
 const Demo = {
   _rules: DEMO_RULES.slice(),
   async meta(){ return { live:false, env:'CMA — Production (sample)', user:'Preview' }; },
   async activeStandard(){ return {...DEMO_STD}; },
+  async updateStandard(_id, patch){ if('br_reviewallflows' in patch) DEMO_STD.reviewAllFlows=patch.br_reviewallflows; if('br_isactive' in patch) DEMO_STD.active=patch.br_isactive; },
   async recentRuns(){ return [
     { id:'run1', name:'Crawl', completedOn:'2026-08-04T02:00:00Z', flowsScanned:312, findingsCount:1204, avgScore:74 },
     { id:'run0', name:'Crawl', completedOn:'2026-08-03T02:00:00Z', flowsScanned:311, findingsCount:1347, avgScore:68 } ]; },
@@ -817,7 +829,21 @@ async function runReviewNow(btn){
 }
 
 /* ============================ RENDER: STANDARD & RULES ============================ */
-let STD_LOADED=false, ACTIVE_STD=null, RULES=[];
+let STD_LOADED=false, ACTIVE_STD=null, RULES=[], STD_TOGGLES_WIRED=false;
+function wireStdToggles(){
+  if(STD_TOGGLES_WIRED) return; STD_TOGGLES_WIRED=true;
+  document.getElementById('stdActive').addEventListener('click', ()=>saveStdFlag('br_isactive','active','stdActive','Standard active'));
+  document.getElementById('stdAllFlows').addEventListener('click', ()=>saveStdFlag('br_reviewallflows','reviewAllFlows','stdAllFlows','Review all flows'));
+}
+async function saveStdFlag(field, key, btnId, label){
+  if(!ACTIVE_STD) return;
+  const btn=document.getElementById(btnId);
+  const next=btn.classList.contains('off');          // was off → turning on
+  btn.classList.toggle('off', !next);
+  ACTIVE_STD[key]=next;
+  try{ await DS.updateStandard(ACTIVE_STD.id, {[field]:next}); toast(label+(next?' on.':' off.')); }
+  catch(err){ console.error(err); btn.classList.toggle('off', next); ACTIVE_STD[key]=!next; toast('Could not update: '+(err.message||err), 'err'); }
+}
 async function loadStandard(){
   if(STD_LOADED) return; STD_LOADED=true;
   try{
@@ -827,6 +853,8 @@ async function loadStandard(){
     document.getElementById('stdName').textContent = ACTIVE_STD.name;
     document.getElementById('stdText').textContent = ACTIVE_STD.text;
     document.getElementById('stdActive').classList.toggle('off', !ACTIVE_STD.active);
+    document.getElementById('stdAllFlows').classList.toggle('off', !ACTIVE_STD.reviewAllFlows);
+    wireStdToggles();
     RULES = await DS.rules(ACTIVE_STD.id);
     document.getElementById('stdMeta').innerHTML =
       `<span class="k">Code <b class="mono">${esc(ACTIVE_STD.code||'—')}</b></span>

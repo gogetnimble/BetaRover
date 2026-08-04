@@ -13,7 +13,7 @@ Web API:
 |-----|-------|--------|
 | **Tenant Dashboard** | latest `br_reviewrun` + its `br_flowreview` rows; findings aggregated by severity and by rule | — |
 | **Flow Review** | one `br_flowreview` + its `br_reviewfinding` rows (AI findings shown separately) | creates an on-demand `br_reviewrun` (**Run review now**) |
-| **Standard & Rules** | active `br_reviewstandard` + its `br_reviewrule` rows | creates rules (**New rule**); enable/disable toggles |
+| **Standard & Rules** | active `br_reviewstandard` + its `br_reviewrule` rows | creates rules (**New rule**); enable/disable toggles; **Active** and **Review all flows** toggles on the standard |
 
 Clicking a flow on the dashboard opens its review. **Run review now** creates a
 `br_reviewrun` (trigger source `ondemand`) — see

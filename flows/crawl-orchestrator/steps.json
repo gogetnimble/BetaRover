@@ -13,7 +13,7 @@
       "type": "Scope",
       "runAfter": { "Compose_Ruleset": ["Succeeded"] },
       "actions": [
-        { "name": "List_Cloud_Flows", "type": "Dataverse.ListRows", "table": "workflows", "$filter": "category eq 5 and statecode eq 1", "$select": "workflowid,name,clientdata,modifiedon", "$top": 5000, "paging": "@odata.nextLink" },
+        { "name": "List_Cloud_Flows", "type": "Dataverse.ListRows", "table": "workflows", "$filter": "category eq 5@{if(first(outputs('Get_Active_Standard')?['body/value'])?['br_reviewallflows'], '', ' and statecode eq 1')}", "$filterNote": "Reviews only activated flows (statecode eq 1) unless the active standard's 'Review all flows' (br_reviewallflows) is on, in which case every cloud flow is listed.", "$select": "workflowid,name,clientdata,modifiedon,statecode", "$top": 5000, "paging": "@odata.nextLink" },
         { "name": "Enrich_From_Management_API", "type": "HTTP", "note": "Power Automate Management API for owner principal type, environment, state." },
         {
           "name": "Apply_to_each_flow",

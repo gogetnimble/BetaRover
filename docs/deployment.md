@@ -133,6 +133,11 @@ Create a model-driven app **Flow Code Review** and add the six tables:
 - **Configuration** area: Review Standards, Review Rules.
 - **Results** area: Review Runs → Flow Reviews → Findings; a Flow Inventory list.
 
+On the **Review Run** form, add the related **Flow Reviews** as a subgrid so
+clicking a run shows the flows it reviewed; on **Flow Review**, add the related
+**Findings** subgrid. That gives the Run → its flows → a flow's findings
+drill-down natively (the same navigation prototyped in the design mockup).
+
 Then add the UI web resource:
 
 1. Add web resource **`br_flowreview_app`** (type *Webpage (HTML)*) from
@@ -158,8 +163,10 @@ the standard's own security rule:
 - **No** System Administrator.
 
 **Flow Review User** (people using the app) — Read on all six `br_*` tables;
-plus Create on `br_reviewrule` (to use **New rule**) and `br_reviewrun` (to use
-**Run review now**). The web resource acts as the signed-in user.
+plus Create on `br_reviewrule` (to use **New rule**), Create on `br_reviewrun`
+(to use **Run review now**), and Write on `br_reviewstandard` (to use the
+**Active** and **Review all flows** toggles). The web resource acts as the
+signed-in user.
 
 ## 9. Verify
 

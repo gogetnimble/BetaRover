@@ -20,7 +20,8 @@
         { "schemaName": "br_code", "type": "Text", "maxLength": 50, "required": true, "description": "Stable code, e.g. CMA-PA-STD." },
         { "schemaName": "br_version", "type": "Text", "maxLength": 20 },
         { "schemaName": "br_standardtext", "type": "Multiline", "maxLength": 100000, "description": "Human-readable standard, passed to the AI reviewer for context." },
-        { "schemaName": "br_isactive", "type": "Boolean", "default": true }
+        { "schemaName": "br_isactive", "type": "Boolean", "default": true },
+        { "schemaName": "br_reviewallflows", "type": "Boolean", "default": false, "description": "When true, the nightly crawl reviews every flow including turned-off (draft/suspended) ones. When false (default), only activated flows are reviewed. Set from the web resource's Standard & Rules tab." }
       ]
     },
     {

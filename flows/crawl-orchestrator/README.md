@@ -26,7 +26,10 @@ tenant. `steps.json` is a readable action-by-action contract.
      (parse `br_parametersjson` per rule into `parameters`).
 4. **Try** (Scope):
    1. **Enumerate flows — Dataverse.** `List rows` on `workflows`:
-      - `$filter`: `category eq 5 and statecode eq 1` (cloud flows, activated)
+      - `$filter`: `category eq 5` (cloud flows), **plus** `and statecode eq 1`
+        (activated only) unless the active standard's **`br_reviewallflows`** is
+        on — when on, the `statecode` clause is dropped so draft/suspended flows
+        are reviewed too. See `steps.json` for the exact expression.
       - `$select`: `workflowid,name,clientdata,modifiedon,statecode`
       - `$top`: a sensible page size (e.g. 5000); page with `@odata.nextLink`.
    2. **Enrich — Management API.** For each flow (or in bulk per environment),

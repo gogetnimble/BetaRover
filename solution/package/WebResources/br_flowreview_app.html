@@ -30,7 +30,7 @@
     --text:#141a2a; --muted:#5a637a; --faint:#8b93a8;
     --accent:#2f5bff; --accent-ink:#1b3ad1; --accent-weak:#e5ebff;
     --good:#1f9d63; --good-bg:#e2f4ea;
-    --warn:#8F7A05; --warn-bg:#FAF2C6;
+    --warn:#EFC935; --warn-text:#8a6d00; --warn-bg:#FAF2C6;
     --bad:#d63a34;  --bad-bg:#fbe4e2;
     --na:#7b849a;   --na-bg:#eceef4;
     --info:#3f74c7; --info-bg:#e6eefb;
@@ -45,7 +45,7 @@
       --border:#232c41; --border-strong:#313c56;
       --text:#e7ebf5; --muted:#98a2ba; --faint:#6b7590;
       --accent:#5f83ff; --accent-ink:#8aa4ff; --accent-weak:#1b2646;
-      --good:#3fca86; --good-bg:#12281d; --warn:#EFC935; --warn-bg:#2C2705;
+      --good:#3fca86; --good-bg:#12281d; --warn:#EFC935; --warn-text:#EFC935; --warn-bg:#2C2705;
       --bad:#f0645c; --bad-bg:#2e1615; --na:#8791a8; --na-bg:#1a2032;
       --info:#6ea1ec; --info-bg:#14223a; --ai:#a888f2; --ai-bg:#211a37;
       --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
@@ -54,14 +54,14 @@
   :root[data-theme="light"]{
     --bg:#eef1f7; --panel:#ffffff; --panel-2:#f6f8fc; --border:#d7dded; --border-strong:#c3cbe0;
     --text:#141a2a; --muted:#5a637a; --faint:#8b93a8; --accent:#2f5bff; --accent-ink:#1b3ad1; --accent-weak:#e5ebff;
-    --good:#1f9d63; --good-bg:#e2f4ea; --warn:#8F7A05; --warn-bg:#FAF2C6; --bad:#d63a34; --bad-bg:#fbe4e2;
+    --good:#1f9d63; --good-bg:#e2f4ea; --warn:#EFC935; --warn-text:#8a6d00; --warn-bg:#FAF2C6; --bad:#d63a34; --bad-bg:#fbe4e2;
     --na:#7b849a; --na-bg:#eceef4; --info:#3f74c7; --info-bg:#e6eefb; --ai:#7b52d6; --ai-bg:#efe8fc;
     --shadow:0 1px 2px rgba(20,26,42,.06), 0 8px 24px rgba(20,26,42,.06);
   }
   :root[data-theme="dark"]{
     --bg:#0c101b; --panel:#151b2b; --panel-2:#101623; --border:#232c41; --border-strong:#313c56;
     --text:#e7ebf5; --muted:#98a2ba; --faint:#6b7590; --accent:#5f83ff; --accent-ink:#8aa4ff; --accent-weak:#1b2646;
-    --good:#3fca86; --good-bg:#12281d; --warn:#EFC935; --warn-bg:#2C2705; --bad:#f0645c; --bad-bg:#2e1615;
+    --good:#3fca86; --good-bg:#12281d; --warn:#EFC935; --warn-text:#EFC935; --warn-bg:#2C2705; --bad:#f0645c; --bad-bg:#2e1615;
     --na:#8791a8; --na-bg:#1a2032; --info:#6ea1ec; --info-bg:#14223a; --ai:#a888f2; --ai-bg:#211a37;
     --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
   }
@@ -114,14 +114,14 @@
   .chip{display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; letter-spacing:.02em; white-space:nowrap}
   .chip svg{width:12px;height:12px}
   .chip.pass{background:var(--good-bg); color:var(--good)}
-  .chip.warn{background:var(--warn-bg); color:var(--warn)}
+  .chip.warn{background:var(--warn-bg); color:var(--warn-text)}
   .chip.fail{background:var(--bad-bg); color:var(--bad)}
   .chip.na{background:var(--na-bg); color:var(--na)}
   .chip.info{background:var(--info-bg); color:var(--info)}
   .chip.ai{background:var(--ai-bg); color:var(--ai)}
   .sev{font-family:var(--font-mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 6px; border-radius:5px; font-weight:700}
   .sev.error,.sev.critical{background:var(--bad-bg); color:var(--bad)}
-  .sev.warning{background:var(--warn-bg); color:var(--warn)}
+  .sev.warning{background:var(--warn-bg); color:var(--warn-text)}
   .sev.info{background:var(--info-bg); color:var(--info)}
 
   .page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap}
@@ -150,7 +150,7 @@
   .score-cell{display:flex; align-items:center; gap:9px}
   .grade{width:26px; height:26px; border-radius:7px; display:grid; place-items:center; font-weight:800; font-size:13px; font-family:var(--font-mono); flex:none}
   .grade.A,.grade.B{background:var(--good-bg); color:var(--good)}
-  .grade.C{background:var(--warn-bg); color:var(--warn)}
+  .grade.C{background:var(--warn-bg); color:var(--warn-text)}
   .grade.D,.grade.F{background:var(--bad-bg); color:var(--bad)}
   .bar{height:6px; border-radius:4px; background:var(--panel-2); overflow:hidden; width:80px}
   .bar > i{display:block; height:100%; border-radius:4px}
@@ -701,7 +701,7 @@ async function loadDashboard(){
         <td><div class="score-cell"><span class="grade ${g}">${g}</span><div><div class="mono" style="font-weight:700">${fl.score}</div>
           <div class="bar"><i style="width:${fl.score}%;background:${scoreColor(fl.score)}"></i></div></div></div></td>
         <td><div class="findpills"><span class="fp" style="background:var(--good-bg);color:var(--good)">${fl.passed}✓</span>
-          <span class="fp" style="background:var(--warn-bg);color:var(--warn)">${fl.warnings}!</span>
+          <span class="fp" style="background:var(--warn-bg);color:var(--warn-text)">${fl.warnings}!</span>
           <span class="fp" style="background:var(--bad-bg);color:var(--bad)">${fl.failed}✕</span></div></td></tr>`;
     }).join('');
 
@@ -714,10 +714,11 @@ async function loadDashboard(){
         <div class="sev-item"><span class="swatch" style="background:var(--info)"></span>Info <span class="n">${sev.info}</span></div></div>`;
 
     document.getElementById('ruleLegend').innerHTML = ruleComp.map(r=>{
-      const col=r.pct>=80?'var(--good)':r.pct>=60?'var(--warn)':'var(--bad)';
+      const barCol=r.pct>=80?'var(--good)':r.pct>=60?'var(--warn)':'var(--bad)';
+      const txtCol=r.pct>=80?'var(--good)':r.pct>=60?'var(--warn-text)':'var(--bad)';
       return `<div class="legrow"><span class="k mono">${esc(r.code.replace(/_/g,' '))}</span>
-        <span class="track"><i style="width:${r.pct}%;background:${col}"></i></span>
-        <span class="n" style="color:${col}">${r.pct}%</span></div>`; }).join('');
+        <span class="track"><i style="width:${r.pct}%;background:${barCol}"></i></span>
+        <span class="n" style="color:${txtCol}">${r.pct}%</span></div>`; }).join('');
   }catch(err){ DASH_LOADED=false; console.error(err); toast('Could not load dashboard: '+(err.message||err), 'err'); }
 }
 

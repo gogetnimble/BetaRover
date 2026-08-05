@@ -90,6 +90,11 @@
   .statuspill.live .dot{background:var(--good)}
   .statuspill.preview{background:var(--warn-bg); color:var(--warn); border-color:transparent}
   .statuspill.preview .dot{background:var(--warn)}
+  .hsearch{display:inline-flex;align-items:center;gap:7px;height:30px;width:min(240px,26vw);background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:0 10px;color:var(--faint)}
+  .hsearch svg{width:13px;height:13px;flex:none}
+  .hsearch input{border:0;background:transparent;color:var(--text);font-size:12.5px;font-family:inherit;width:100%;outline:none}
+  .hsearch input::placeholder{color:var(--faint)}
+  .havatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7b52d6);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
 
   .wr-toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 0 16px}
   .segmented{display:inline-flex; background:var(--panel-2); border:1px solid var(--border); border-radius:9px; padding:3px}
@@ -285,10 +290,12 @@
     <h1>Ember</h1>
     <span class="env" id="envPill">—</span>
     <span class="spacer"></span>
-    <span class="statuspill preview" id="statusPill"><span class="dot"></span>Preview</span>
+    <div class="hsearch"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="m14 14 3 3"/></svg><input placeholder="Search flows, findings…" aria-label="Search flows and findings"></div>
     <button class="mini" id="themeBtn" title="Toggle light / dark">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
     </button>
+    <span class="statuspill preview" id="statusPill"><span class="dot"></span>Preview</span>
+    <div class="havatar" id="userAvatar" title="Signed-in user (WhoAmI)">··</div>
   </header>
 
   <div class="wr-toolbar">
@@ -936,6 +943,9 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   const pill=document.getElementById('statusPill');
   pill.className = 'statuspill '+(meta.live?'live':'preview');
   pill.innerHTML = `<span class="dot"></span>${meta.live?'Live':'Preview'}`;
+  const nm=(meta.user||'').trim(), parts=nm?nm.split(/\s+/).filter(Boolean):[];
+  const initials = parts.length>=2 ? (parts[0][0]+parts[1][0]).toUpperCase() : (parts[0]?parts[0].slice(0,2).toUpperCase():'··');
+  const av=document.getElementById('userAvatar'); if(av){ av.textContent=initials; av.title = nm?('Signed in as '+nm):'Signed-in user (WhoAmI)'; }
   await loadDashboard();
   // deep-link: ?flowReviewId=<guid> opens a specific review
   const q = new URLSearchParams(location.search);

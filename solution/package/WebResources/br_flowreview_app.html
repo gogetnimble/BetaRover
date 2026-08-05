@@ -290,7 +290,7 @@
     <h1>Ember</h1>
     <span class="env" id="envPill">—</span>
     <span class="spacer"></span>
-    <div class="hsearch"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="m14 14 3 3"/></svg><input placeholder="Search flows, findings…" aria-label="Search flows and findings"></div>
+    <div class="hsearch"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="m14 14 3 3"/></svg><input id="flowSearch" placeholder="Search flows, findings…" aria-label="Search flows and findings"></div>
     <button class="mini" id="themeBtn" title="Toggle light / dark">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
     </button>
@@ -679,7 +679,22 @@ function donut(segments, centerTop, centerBottom, size){
 }
 
 /* ============================ RENDER: DASHBOARD ============================ */
-let DASH_LOADED=false;
+let DASH_LOADED=false, DASH_FLOWS=[];
+function renderFlowRows(list){
+  const el=document.getElementById('flowRows');
+  if(!list.length){ el.innerHTML='<tr><td colspan="4"><div class="empty" style="padding:22px 18px">No flows match your search.</div></td></tr>'; return; }
+  el.innerHTML = list.map(fl=>{
+    const g=gradeFor(fl.score); const bad = fl.ownerType && fl.ownerType.toLowerCase()==='user';
+    return `<tr data-id="${esc(fl.id)}">
+      <td><div class="flow-name">${esc(fl.name)}</div><div class="flow-env">${esc(fl.environment)}</div></td>
+      <td><span class="mono" style="font-size:12px;color:${bad?'var(--bad)':'var(--muted)'}">${esc(fl.owner||'—')}</span></td>
+      <td><div class="score-cell"><span class="grade ${g}">${g}</span><div><div class="mono" style="font-weight:700">${fl.score}</div>
+        <div class="bar"><i style="width:${fl.score}%;background:${scoreColor(fl.score)}"></i></div></div></div></td>
+      <td><div class="findpills"><span class="fp" style="background:var(--good-bg);color:var(--good)">${fl.passed}✓</span>
+        <span class="fp" style="background:var(--warn-bg);color:var(--warn-text)">${fl.warnings}!</span>
+        <span class="fp" style="background:var(--bad-bg);color:var(--bad)">${fl.failed}✕</span></div></td></tr>`;
+  }).join('');
+}
 async function loadDashboard(){
   if(DASH_LOADED) return; DASH_LOADED=true;
   try{
@@ -712,17 +727,8 @@ async function loadDashboard(){
       <div class="card kpi"><div class="label">Error-severity gaps</div>
         <div class="val" style="color:var(--bad)">${sev.error}</div><span class="delta flat">across all flows</span></div>`;
 
-    document.getElementById('flowRows').innerHTML = flows.slice(0,8).map(fl=>{
-      const g=gradeFor(fl.score); const bad = fl.ownerType && fl.ownerType.toLowerCase()==='user';
-      return `<tr data-id="${esc(fl.id)}">
-        <td><div class="flow-name">${esc(fl.name)}</div><div class="flow-env">${esc(fl.environment)}</div></td>
-        <td><span class="mono" style="font-size:12px;color:${bad?'var(--bad)':'var(--muted)'}">${esc(fl.owner||'—')}</span></td>
-        <td><div class="score-cell"><span class="grade ${g}">${g}</span><div><div class="mono" style="font-weight:700">${fl.score}</div>
-          <div class="bar"><i style="width:${fl.score}%;background:${scoreColor(fl.score)}"></i></div></div></div></td>
-        <td><div class="findpills"><span class="fp" style="background:var(--good-bg);color:var(--good)">${fl.passed}✓</span>
-          <span class="fp" style="background:var(--warn-bg);color:var(--warn-text)">${fl.warnings}!</span>
-          <span class="fp" style="background:var(--bad-bg);color:var(--bad)">${fl.failed}✕</span></div></td></tr>`;
-    }).join('');
+    DASH_FLOWS = flows;
+    renderFlowRows(flows.slice(0,8));
 
     const total = sev.error+sev.warning+sev.info;
     document.getElementById('sevWrap').innerHTML =
@@ -947,6 +953,14 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   const initials = parts.length>=2 ? (parts[0][0]+parts[1][0]).toUpperCase() : (parts[0]?parts[0].slice(0,2).toUpperCase():'··');
   const av=document.getElementById('userAvatar'); if(av){ av.textContent=initials; av.title = nm?('Signed in as '+nm):'Signed-in user (WhoAmI)'; }
   await loadDashboard();
+  const searchEl=document.getElementById('flowSearch');
+  if(searchEl) searchEl.addEventListener('input', ()=>{
+    const q=searchEl.value.trim().toLowerCase();
+    if(!document.getElementById('view-dash').classList.contains('active')) switchView('dash');
+    if(!q){ renderFlowRows(DASH_FLOWS.slice(0,8)); return; }
+    const m=DASH_FLOWS.filter(f=>`${f.name} ${f.owner} ${f.environment}`.toLowerCase().includes(q));
+    renderFlowRows(m.slice(0,25));
+  });
   // deep-link: ?flowReviewId=<guid> opens a specific review
   const q = new URLSearchParams(location.search);
   const deep = q.get('flowReviewId') || q.get('id');

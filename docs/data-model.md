@@ -34,6 +34,14 @@ One row per discovered flow, keyed on `br_flowid` (the `workflowid` GUID).
 `br_source` records whether it came from Dataverse, the Management API, or both.
 `br_ownertype` is what `RUN_AS_SERVICE_PRINCIPAL` evaluates.
 `br_definitionhash` lets a run skip flows whose `clientdata` is unchanged.
+`br_lastreviewedon` and `br_lasttestpassedon` are the two "last validated"
+signals shown in Flow Coverage (static review vs. mocked unit tests).
+
+### Flow Test Case / Flow Test Run (`br_flowtestcase`, `br_flowtestrun`)
+The unit-testing tables. A **Flow Test Case** stores an engine `TestCase`
+(`br_casejson` = trigger + mocked outputs + assertions) against a flow; a **Flow
+Test Run** records one mock-execution (status, pass/fail counts, `br_resultjson`).
+See [`unit-testing.md`](unit-testing.md).
 
 ### Review Run (`br_reviewrun`)
 One crawl execution. Rolls up `br_flowsscanned`, `br_findingscount`, and

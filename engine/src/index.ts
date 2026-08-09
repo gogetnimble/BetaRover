@@ -8,6 +8,8 @@ export { NullAiReviewer, AzureOpenAiReviewer } from './ai.js';
 export type { AzureOpenAiConfig } from './ai.js';
 export { handleReviewRequest } from './http.js';
 export type { ReviewRequestBody, HandlerResult } from './http.js';
+export { runTestCase, runTestSuite, evaluateExpression } from './testing/index.js';
+export type { TestCase, TestResult, Assertion, MockAction, ActionStatus } from './testing/index.js';
 
 import { reviewFlow } from './reviewer.js';
 import { DEFAULT_RULESET } from './defaultRuleset.js';

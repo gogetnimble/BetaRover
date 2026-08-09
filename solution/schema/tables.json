@@ -60,7 +60,10 @@
         { "schemaName": "br_lastmodifiedon_src", "type": "DateTime", "description": "modifiedon of the source flow." },
         { "schemaName": "br_definitionhash", "type": "Text", "maxLength": 64, "description": "Hash of clientdata to detect changes between runs." },
         { "schemaName": "br_triggertype", "type": "Text", "maxLength": 100 },
-        { "schemaName": "br_actioncount", "type": "WholeNumber" }
+        { "schemaName": "br_actioncount", "type": "WholeNumber" },
+        { "schemaName": "br_lastreviewedon", "type": "DateTime", "description": "Last time this flow was code-reviewed against the standard (static review)." },
+        { "schemaName": "br_lasttestpassedon", "type": "DateTime", "description": "Last time this flow's mocked unit tests all passed (behavioral test)." },
+        { "schemaName": "br_testcasecount", "type": "WholeNumber", "description": "Number of unit-test cases defined for this flow." }
       ],
       "alternateKeys": [{ "name": "br_flowid_key", "columns": ["br_flowid"] }]
     },
@@ -116,6 +119,35 @@
         { "schemaName": "br_evidence", "type": "Multiline", "maxLength": 4000 },
         { "schemaName": "br_remediation", "type": "Multiline", "maxLength": 4000 },
         { "schemaName": "br_aigenerated", "type": "Boolean", "default": false }
+      ]
+    },
+    {
+      "schemaName": "br_flowtestcase",
+      "displayName": "Flow Test Case",
+      "primaryColumn": "br_name",
+      "description": "A mocked unit test for a flow: pins the trigger + connector outputs and asserts the simulated run (engine TestCase shape).",
+      "columns": [
+        { "schemaName": "br_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true },
+        { "schemaName": "br_flowinventoryid", "type": "Lookup", "target": "br_flowinventory", "required": true },
+        { "schemaName": "br_casejson", "type": "Multiline", "maxLength": 100000, "description": "The test case as JSON: { trigger, mocks, variables, asserts }." },
+        { "schemaName": "br_enabled", "type": "Boolean", "default": true },
+        { "schemaName": "br_description", "type": "Multiline", "maxLength": 4000 }
+      ]
+    },
+    {
+      "schemaName": "br_flowtestrun",
+      "displayName": "Flow Test Run",
+      "primaryColumn": "br_name",
+      "description": "One mock-execution of a flow's test cases. Stamps br_lasttestpassedon on the flow when all pass.",
+      "columns": [
+        { "schemaName": "br_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true },
+        { "schemaName": "br_flowinventoryid", "type": "Lookup", "target": "br_flowinventory", "required": true },
+        { "schemaName": "br_status", "type": "Choice", "options": ["passed", "failed", "error"] },
+        { "schemaName": "br_passed", "type": "WholeNumber" },
+        { "schemaName": "br_failed", "type": "WholeNumber" },
+        { "schemaName": "br_durationms", "type": "WholeNumber" },
+        { "schemaName": "br_ranon", "type": "DateTime" },
+        { "schemaName": "br_resultjson", "type": "Multiline", "maxLength": 100000, "description": "Per-case results + traces (engine TestResult[])." }
       ]
     }
   ]

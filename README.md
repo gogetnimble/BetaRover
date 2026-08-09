@@ -45,7 +45,7 @@ reasoning behind the low-code-orchestration / pro-code-engine split.
 
 | Path | What it is |
 |------|------------|
-| `engine/` | The review engine — TypeScript, fully unit-tested. The deterministic rules + AI adapter. Deployable as an Azure Function. |
+| `engine/` | The review engine — TypeScript, fully unit-tested. Deterministic rules + AI adapter, **plus a mock-execution runner** (`engine/src/testing/`) that simulates a flow against mocked connector outputs and asserts the result. Deployable as an Azure Function. |
 | `webresource/` | The model-driven app UI — a single self-contained HTML web resource (dashboard, per-flow review, add-rule). Wired to the Dataverse Web API, with a sample-data preview mode. |
 | `solution/package/` | Importable unmanaged solution (**Ember**) — publisher and the web resource. Pack with `zip` (or `pac solution pack`) and import. |
 | `solution/provision/` | Node script that creates the 9 global choices and six tables (from `tables.json`) via the Dataverse Web API and seeds the default standard/rules. |

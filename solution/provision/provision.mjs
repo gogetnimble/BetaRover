@@ -56,6 +56,7 @@ const STATUS_OPTIONSET_BY_TABLE = {
   br_reviewrun: 'br_runstatus',
   br_flowreview: 'br_flowreviewstatus',
   br_reviewfinding: 'br_findingstatus',
+  br_flowtestrun: 'br_teststatus',
 };
 
 async function api(method, path, body, extraHeaders = {}) {
@@ -91,6 +92,7 @@ const OPTIONSETS = {
   br_runstatus:       { label: 'Run status',         opts: [['Queued',100000000],['Running',100000001],['Completed',100000002],['Failed',100000003]] },
   br_flowreviewstatus:{ label: 'Flow review status', opts: [['Pass',100000000],['Warning',100000001],['Fail',100000002]] },
   br_triggersource:   { label: 'Trigger source',     opts: [['schedule',100000000],['ondemand',100000001]] },
+  br_teststatus:      { label: 'Test status',        opts: [['passed',100000000],['failed',100000001],['error',100000002]] },
 };
 async function optionSetExists(name) {
   try { await api('GET', `GlobalOptionSetDefinitions(Name='${name}')?$select=Name`); return true; }

@@ -129,30 +129,29 @@ on-demand README).
 Both follow Try/Catch/Finally, logging, and bounded queries — the very standard
 they enforce.
 
-## 7. Build the model-driven app + web resource
+## 7. Build the model-driven app + site map
 
-Create a model-driven app **Ember** and add the six tables:
-
-- **Configuration** area: Review Standards, Review Rules.
-- **Results** area: Review Runs → Flow Reviews → Findings; a Flow Inventory list.
-
-On the **Review Run** form, add the related **Flow Reviews** as a subgrid so
-clicking a run shows the flows it reviewed; on **Flow Review**, add the related
-**Findings** subgrid. That gives the Run → its flows → a flow's findings
-drill-down natively (the same navigation prototyped in the design mockup).
-
-Then add the UI web resource:
+The Ember UI is a single web resource; the app's **site map** drives every
+section of it. Each menu item opens the web resource with a `?data=` value that
+the resource reads on load and routes to (dashboard, the four grids, standards,
+rules, schedule). Full walkthrough + the exact site map:
+[`solution/app/README.md`](../solution/app/README.md).
 
 1. Add web resource **`br_flowreview_app`** (type *Webpage (HTML)*) from
    [`webresource/br_flowreview_app.html`](../webresource/br_flowreview_app.html).
-2. **Configure it** — the `CHOICES` block already matches the values the
-   provisioning script assigns (step 2), so it works as-is. You only touch
-   `CONFIG` if you changed the publisher prefix or the lookup navigation
-   property names. Full instructions:
-   [`webresource/README.md`](../webresource/README.md).
-3. Surface it **full-page**: add a **Subarea** with **Type = Web resource**,
-   **URL = `$webresource:br_flowreview_app`**, titled *Dashboard*.
-4. **Publish all customizations.**
+   Its `CHOICES` block already matches the values the provisioning script assigns
+   (step 2); you only touch `CONFIG` for a different publisher prefix or lookup
+   navigation names — see [`webresource/README.md`](../webresource/README.md).
+2. Create a model-driven app **Ember**; add the web resource **and** the six
+   tables as components (the tables must be in the app for the web resource's Web
+   API calls to resolve).
+3. Build the **site map** from [`solution/app/sitemap.xml`](../solution/app/sitemap.xml):
+   two groups (Review, Configuration) with eight Web Resource subareas, each
+   **URL = `/WebResources/br_flowreview_app.html?data=<section>`**.
+4. **Save & Publish.**
+
+Clicking a flow in any grid opens its Flow Review; clicking a run opens that
+run's Flow Reviews — all inside the web resource.
 
 ## 8. Security
 

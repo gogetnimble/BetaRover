@@ -49,6 +49,7 @@ reasoning behind the low-code-orchestration / pro-code-engine split.
 | `webresource/` | The model-driven app UI — a single self-contained HTML web resource (dashboard, per-flow review, add-rule). Wired to the Dataverse Web API, with a sample-data preview mode. |
 | `solution/package/` | Importable unmanaged solution (**Ember**) — publisher and the web resource. Pack with `zip` (or `pac solution pack`) and import. |
 | `solution/provision/` | Node script that creates the 9 global choices and six tables (from `tables.json`) via the Dataverse Web API and seeds the default standard/rules. |
+| `solution/app/` | The model-driven app **site map** — each menu item opens the web resource at a `?data=` section. |
 | `solution/schema/tables.json` | Deployable specification of the six Dataverse tables. |
 | `solution/seed/default-ruleset.json` | Seed rule records encoding the sample standard (generated from the engine). |
 | `flows/crawl-orchestrator/` | The nightly orchestration cloud flow: crawl → inventory → review → persist. |

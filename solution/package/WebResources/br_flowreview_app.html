@@ -282,6 +282,24 @@
   .tip .tiptext{position:absolute;bottom:150%;right:0;background:var(--text);color:var(--bg);font-size:11.5px;font-weight:500;line-height:1.5;padding:9px 11px;border-radius:8px;width:240px;text-align:left;opacity:0;visibility:hidden;transition:opacity .15s;box-shadow:0 10px 28px rgba(0,0,0,.28);z-index:50}
   .tip .tiptext b{color:var(--bg)}
   .tip:hover .tiptext,.tip:focus .tiptext{opacity:1;visibility:visible}
+  /* raw-table grids */
+  .grid-shell{padding:2px 0 40px}
+  .gv-title{font-size:20px;font-weight:650;letter-spacing:-.01em}
+  .gv-sub{color:var(--muted);font-size:12.5px;margin:4px 0 14px}
+  .dg-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .dgt{width:100%;border-collapse:collapse;font-size:13px}
+  .dgt th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--panel-2)}
+  .dgt td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;color:var(--text)}
+  .dgt tbody tr:last-child td{border-bottom:0}
+  .dgt tbody tr[data-id]:hover,.dgt tbody tr[data-flow]:hover,.dgt tbody tr[data-goto]:hover{background:var(--panel-2);cursor:pointer}
+  .dg-link{color:var(--accent);font-weight:600}
+  .dgt tbody tr:hover .dg-link{text-decoration:underline}
+  .dg-foot{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+  .statecell{display:inline-flex;align-items:center;gap:7px}
+  .dot-state{width:8px;height:8px;border-radius:50%;flex:none}
+  .cfg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px dashed var(--border);font-size:13px}
+  .cfg-row:last-child{border-bottom:0}
+  .wr-toolbar .segmented{flex-wrap:wrap}
 </style>
 
 <div class="shell">
@@ -298,11 +316,18 @@
     <div class="havatar" id="userAvatar" title="Signed-in user (WhoAmI)">··</div>
   </header>
 
-  <div class="wr-toolbar">
+  <!-- In-page nav (mirrors the app site map). Hidden when embedded — the
+       model-driven app's native site map drives navigation via ?data=. -->
+  <div class="wr-toolbar" id="sectionNav">
     <div class="segmented" role="tablist">
-      <button class="active" data-view="dash" role="tab"><span class="dot"></span>Tenant Dashboard</button>
-      <button data-view="flow" role="tab"><span class="dot"></span>Flow Review</button>
-      <button data-view="std" role="tab"><span class="dot"></span>Standard &amp; Rules</button>
+      <button class="active" data-view="dash" role="tab">Dashboard</button>
+      <button data-view="flowinventory" role="tab">Flow Inventory</button>
+      <button data-view="reviewruns" role="tab">Review Runs</button>
+      <button data-view="flowreviews" role="tab">Flow Reviews</button>
+      <button data-view="findings" role="tab">Findings</button>
+      <button data-view="standards" role="tab">Review Standards</button>
+      <button data-view="std" role="tab">Review Rules</button>
+      <button data-view="schedule" role="tab">Crawl Schedule</button>
     </div>
   </div>
 
@@ -380,6 +405,14 @@
       </table></div>
     </div>
   </section>
+
+  <!-- ===================== RAW-TABLE SECTIONS ===================== -->
+  <section class="view" id="view-flowinventory"><div class="grid-shell" id="grid-flowinventory"></div></section>
+  <section class="view" id="view-reviewruns"><div class="grid-shell" id="grid-reviewruns"></div></section>
+  <section class="view" id="view-flowreviews"><div class="grid-shell" id="grid-flowreviews"></div></section>
+  <section class="view" id="view-findings"><div class="grid-shell" id="grid-findings"></div></section>
+  <section class="view" id="view-standards"><div class="grid-shell" id="grid-standards"></div></section>
+  <section class="view" id="view-schedule"><div class="grid-shell" id="grid-schedule"></div></section>
 </div>
 
 <!-- ===== ADD-RULE MODAL (Quick Create for br_reviewrule) ===== -->
@@ -930,11 +963,154 @@ $('rmSave').addEventListener('click', async ()=>{
 });
 
 /* ============================ TABS / THEME / INIT ============================ */
+/* ===================== RAW-TABLE SECTIONS (grids) ===================== */
+function _chip(v){ const s=String(v||'').toLowerCase();
+  if(['completed','pass','activated'].includes(s)) return 'pass';
+  if(['failed','fail','suspended'].includes(s)) return 'fail';
+  if(s==='warning'||s==='warn') return 'warn';
+  if(s==='running') return 'info';
+  if(s==='queued'||s==='draft') return 'na';
+  return 'info'; }
+const rChipS = v => `<span class="chip ${_chip(v)}">${esc(v)}</span>`;
+const rSevS  = v => `<span class="sev ${esc(String(v||'info').toLowerCase())}">${esc(v)}</span>`;
+const rStateS = v => { const c={Activated:'var(--good)',Draft:'var(--na)',Suspended:'var(--warn)'}[v]||'var(--na)';
+  return `<span class="statecell"><span class="dot-state" style="background:${c}"></span>${esc(v)}</span>`; };
+const rScoreS = v => { const g=gradeFor(v),c=scoreColor(v);
+  return `<span class="statecell"><span class="grade ${g}" style="width:22px;height:22px;font-size:11px">${g}</span><span class="mono" style="font-weight:700;color:${c}">${v}</span></span>`; };
+const rOwnerS = (v,r)=> `<span class="mono" style="font-size:12px;color:${String(r.otype||'').toLowerCase()==='user'?'var(--bad)':'var(--muted)'}">${esc(v||'—')}</span>`;
+const rAiS = v => v ? '<span class="chip ai">AI</span>' : '<span style="color:var(--faint)">—</span>';
+
+function dgrid(id, cfg){
+  const cols = cfg.columns;
+  const head = cols.map(c=>`<th>${esc(c.label)}</th>`).join('');
+  const rowAttr = r => (r._id?` data-id="${esc(r._id)}"`:'') + (r._flow?` data-flow="${esc(r._flow)}"`:'') + (r._goto?` data-goto="${esc(r._goto)}"`:'');
+  const body = cfg.rows.length ? cfg.rows.map(r=>`<tr${rowAttr(r)}>${cols.map((c,i)=>`<td>${c.render?c.render(r[c.key],r):(i===0&&cfg.link?`<span class="dg-link">${esc(r[c.key])}</span>`:esc(r[c.key]))}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${cols.length}"><div class="empty" style="padding:26px 18px">${esc(cfg.empty||'No records.')}</div></td></tr>`;
+  document.getElementById(id).innerHTML = `
+    <div class="gv-title">${esc(cfg.title)}</div>
+    <div class="gv-sub">${esc(cfg.sub||'')} <span class="mono" style="font-size:11px;color:var(--faint)">${esc(cfg.entity||'')}</span></div>
+    <div class="dg-card"><div style="overflow-x:auto"><table class="dgt"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+      <div class="dg-foot"><span>${cfg.rows.length} record${cfg.rows.length===1?'':'s'}</span></div></div>`;
+}
+const spinCard = '<div class="card empty"><span class="spin"></span> Loading…</div>';
+
+const DEMO_INVENTORY=[
+  {name:'CMA - Membership - Add new Roles on Contact Creation',env:'CMA — Production',owner:'svc-membership',otype:'application',state:'Activated',actions:34,src:'both',_flow:'d4'},
+  {name:'CMA - Finance - Nightly Invoice Sync',env:'CMA — Production',owner:'svc-finance',otype:'application',state:'Activated',actions:52,src:'both',_flow:'d3'},
+  {name:'CMA - Marketing - Event Reminder',env:'CMA — UAT',owner:'svc-marketing',otype:'application',state:'Activated',actions:19,src:'dataverse',_flow:'d5'},
+  {name:'CMA - System - Validate Logger',env:'CMA — Production',owner:'svc-system',otype:'application',state:'Activated',actions:8,src:'both',_flow:'d6'},
+  {name:'Membership Renewal Reminder',env:'CMA — Production',owner:'svc-membership',otype:'application',state:'Activated',actions:27,src:'both',_flow:'d2'},
+  {name:'Copy of Send Weekly Digest',env:'CMA — Dev',owner:'g.thomas@cma.ca',otype:'user',state:'Suspended',actions:12,src:'dataverse',_flow:'d1'}
+];
+const DEMO_RUNS=[
+  {name:'Crawl 2026-08-04 02:00',status:'Completed',trig:'schedule',started:'04 Aug 02:00',completed:'04 Aug 02:14',flows:312,findings:1204,avg:74,_goto:'flowreviews'},
+  {name:'On-demand · CMA - Membership …',status:'Completed',trig:'ondemand',started:'04 Aug 09:12',completed:'04 Aug 09:12',flows:1,findings:8,avg:78,_goto:'flowreviews'},
+  {name:'Crawl 2026-08-03 02:00',status:'Completed',trig:'schedule',started:'03 Aug 02:00',completed:'03 Aug 02:15',flows:311,findings:1347,avg:68,_goto:'flowreviews'},
+  {name:'Crawl 2026-08-02 02:00',status:'Failed',trig:'schedule',started:'02 Aug 02:00',completed:'02 Aug 02:03',flows:0,findings:0,avg:0,_goto:'flowreviews'}
+];
+const DEMO_FINDINGS=[
+  {flow:'Copy of Send Weekly Digest',rule:'ERROR_HANDLING_SCOPES',status:'fail',sev:'error',cat:'ErrorHandling',ai:false,_id:'d1'},
+  {flow:'CMA - Finance - Nightly Invoice Sync',rule:'CONFIG_LIST_TOP',status:'warning',sev:'warning',cat:'Configuration',ai:false,_id:'d3'},
+  {flow:'CMA - Membership - Add new Roles on Contact Creation',rule:'ERROR_HANDLING_SCOPES',status:'fail',sev:'error',cat:'ErrorHandling',ai:false,_id:'d4'},
+  {flow:'CMA - Membership - Add new Roles on Contact Creation',rule:'AI_REVIEW',status:'warning',sev:'info',cat:'General',ai:true,_id:'d4'},
+  {flow:'CMA - System - Validate Logger',rule:'NAMING_CONVENTION',status:'pass',sev:'error',cat:'Naming',ai:false,_id:'d6'}
+];
+const DEMO_STANDARDS=[
+  {name:'CMA Power Automate Delivery Standard',code:'CMA-PA-STD',version:'1.0.0',active:true,_goto:'std'},
+  {name:'CMA Power Automate Delivery Standard (draft)',code:'CMA-PA-STD',version:'1.1.0-draft',active:false,_goto:'std'}
+];
+
+let INV_LOADED=false, RUNS_LOADED=false, FR_LOADED=false, FIND_LOADED=false, STDS_LOADED=false, SCH_LOADED=false;
+async function loadInventory(){ if(INV_LOADED) return; INV_LOADED=true;
+  const host=document.getElementById('grid-flowinventory'); host.innerHTML=spinCard;
+  try{ let rows;
+    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,"?$select=br_name,br_environment,br_ownername,br_ownertype,br_state,br_actioncount,br_source,br_flowid&$orderby=br_name asc&$top=500");
+      rows=r.entities.map(e=>({ name:e.br_name, env:e.br_environment||'', owner:e.br_ownername||'', otype:fmt(e,'br_ownertype')||'', state:fmt(e,'br_state')||'', actions:e.br_actioncount||0, src:fmt(e,'br_source')||'', _flow:e.br_flowid })); }
+    else rows=DEMO_INVENTORY.slice();
+    dgrid('grid-flowinventory',{ title:'Flow Inventory', entity:CONFIG.entities.inventory, link:true, sub:'discovered cloud flows · click to open review',
+      columns:[{key:'name',label:'Name'},{key:'env',label:'Environment'},{key:'owner',label:'Owner',render:rOwnerS},{key:'otype',label:'Owner type'},{key:'state',label:'State',render:rStateS},{key:'actions',label:'Actions'},{key:'src',label:'Source'}], rows });
+  }catch(err){ INV_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadRuns(){ if(RUNS_LOADED) return; RUNS_LOADED=true;
+  const host=document.getElementById('grid-reviewruns'); host.innerHTML=spinCard;
+  try{ let rows;
+    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,"?$select=br_name,br_status,br_triggersource,br_startedon,br_completedon,br_flowsscanned,br_findingscount,br_averagescore&$orderby=br_createdon desc&$top=100");
+      rows=r.entities.map(e=>({ name:e.br_name, status:fmt(e,'br_status')||'', trig:fmt(e,'br_triggersource')||'', started:shortDate(e.br_startedon), completed:shortDate(e.br_completedon), flows:e.br_flowsscanned||0, findings:e.br_findingscount||0, avg:Math.round(e.br_averagescore||0), _goto:'flowreviews' })); }
+    else rows=DEMO_RUNS.slice();
+    dgrid('grid-reviewruns',{ title:'Review Runs', entity:CONFIG.entities.run, link:true, sub:'nightly + on-demand executions · click to see flow reviews',
+      columns:[{key:'name',label:'Name'},{key:'status',label:'Status',render:rChipS},{key:'trig',label:'Trigger'},{key:'started',label:'Started'},{key:'completed',label:'Completed'},{key:'flows',label:'Flows'},{key:'findings',label:'Findings'},{key:'avg',label:'Avg score'}], rows });
+  }catch(err){ RUNS_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadFlowReviews(){ if(FR_LOADED) return; FR_LOADED=true;
+  const host=document.getElementById('grid-flowreviews'); host.innerHTML=spinCard;
+  try{ let rows;
+    if(LIVE){ const runs=await DS.recentRuns(); if(!runs.length){ dgrid('grid-flowreviews',{title:'Flow Reviews',entity:CONFIG.entities.flowreview,rows:[],empty:'No completed run yet.'}); return; }
+      const fr=await DS.flowReviews(runs[0].id);
+      rows=fr.map(f=>({ flow:f.name, env:f.environment, score:f.score, status:f.score>=85?'Pass':f.score>=70?'Warning':'Fail', p:f.passed, w:f.warnings, f:f.failed, _id:f.id })); }
+    else rows=DEMO_FLOWS.map(f=>({ flow:f.name, env:f.environment, score:f.score, status:f.score>=85?'Pass':f.score>=70?'Warning':'Fail', p:f.passed, w:f.warnings, f:f.failed, _id:f.id }));
+    dgrid('grid-flowreviews',{ title:'Flow Reviews', entity:CONFIG.entities.flowreview, link:true, sub:'latest run · click to open the review',
+      columns:[{key:'flow',label:'Flow'},{key:'env',label:'Environment'},{key:'score',label:'Score',render:rScoreS},{key:'status',label:'Status',render:rChipS},{key:'p',label:'Passed'},{key:'w',label:'Warnings'},{key:'f',label:'Failed'}], rows });
+  }catch(err){ FR_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadFindings(){ if(FIND_LOADED) return; FIND_LOADED=true;
+  const host=document.getElementById('grid-findings'); host.innerHTML=spinCard;
+  try{ let rows;
+    if(LIVE){ const runs=await DS.recentRuns(); if(!runs.length){ dgrid('grid-findings',{title:'Findings',entity:CONFIG.entities.finding,rows:[],empty:'No completed run yet.'}); return; }
+      const fx=`<fetch top='300'><entity name='br_reviewfinding'><attribute name='br_rulecode'/><attribute name='br_status'/><attribute name='br_severity'/><attribute name='br_category'/><attribute name='br_aigenerated'/><order attribute='br_severity' descending='true'/><link-entity name='br_flowreview' from='br_flowreviewid' to='br_flowreviewid' alias='fr'><attribute name='br_name'/><attribute name='br_flowreviewid'/><filter><condition attribute='br_runid' operator='eq' value='${runs[0].id}'/></filter></link-entity></entity></fetch>`;
+      const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding,'?fetchXml='+encodeURIComponent(fx));
+      rows=r.entities.map(e=>({ flow:e['fr.br_name']||'', rule:e.br_rulecode, status:String(fmt(e,'br_status')||'').toLowerCase(), sev:String(fmt(e,'br_severity')||'info').toLowerCase(), cat:fmt(e,'br_category')||'', ai:!!e.br_aigenerated, _id:e['fr.br_flowreviewid'] })); }
+    else rows=DEMO_FINDINGS.slice();
+    dgrid('grid-findings',{ title:'Findings', entity:CONFIG.entities.finding, sub:'latest run · click a row to open the flow review',
+      columns:[{key:'flow',label:'Flow',render:(v)=>`<span class="dg-link">${esc(v)}</span>`},{key:'rule',label:'Rule',render:v=>`<span class="mono" style="font-size:11.5px">${esc(v)}</span>`},{key:'status',label:'Status',render:rChipS},{key:'sev',label:'Severity',render:rSevS},{key:'cat',label:'Category'},{key:'ai',label:'AI',render:rAiS}], rows });
+  }catch(err){ FIND_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadStandards(){ if(STDS_LOADED) return; STDS_LOADED=true;
+  const host=document.getElementById('grid-standards'); host.innerHTML=spinCard;
+  try{ let rows;
+    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,"?$select=br_name,br_code,br_version,br_isactive&$orderby=br_name asc&$top=100");
+      rows=r.entities.map(e=>({ name:e.br_name, code:e.br_code, version:e.br_version, active:!!e.br_isactive, _goto:'std' })); }
+    else rows=DEMO_STANDARDS.slice();
+    dgrid('grid-standards',{ title:'Review Standards', entity:CONFIG.entities.standard, link:true, sub:'click a standard to open its rules',
+      columns:[{key:'name',label:'Name'},{key:'code',label:'Code',render:v=>`<span class="mono">${esc(v)}</span>`},{key:'version',label:'Version',render:v=>`<span class="mono">${esc(v)}</span>`},{key:'active',label:'Active',render:v=>v?'<span class="chip pass">Yes</span>':'<span class="chip na">No</span>'}], rows });
+  }catch(err){ STDS_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadSchedule(){ if(SCH_LOADED) return; SCH_LOADED=true;
+  let std=null; try{ std=await DS.activeStandard(); }catch(_){}
+  const allf = std && std.reviewAllFlows;
+  document.getElementById('grid-schedule').innerHTML = `
+    <div class="gv-title">Crawl Schedule</div>
+    <div class="gv-sub">When the tenant-wide review runs, and how single-flow reviews are triggered.</div>
+    <div class="dg-card"><div class="card-h"><h3>Nightly crawl</h3><span class="chip pass">Scheduled</span></div><div class="pad">
+      <div class="cfg-row"><span>Flow</span><span class="mono" style="color:var(--muted);font-size:12px">BR - Flow Review - Crawl Orchestrator</span></div>
+      <div class="cfg-row"><span>Trigger</span><span>Recurrence · daily 02:00 (configured on the flow)</span></div>
+      <div class="cfg-row"><span>Review all flows</span><span class="chip ${allf?'pass':'na'}">${allf?'On — every flow':'Off — active only'}</span></div>
+      <div class="cfg-row"><span>Scope</span><span>${allf?'every flow, incl. draft / suspended':'activated flows only'}</span></div>
+    </div></div>
+    <div class="dg-card" style="margin-top:14px"><div class="card-h"><h3>On-demand review</h3><span class="chip info">Event-driven</span></div><div class="pad">
+      <div class="cfg-row"><span>Flow</span><span class="mono" style="color:var(--muted);font-size:12px">BR - Flow Review - On-Demand</span></div>
+      <div class="cfg-row"><span>Raised by</span><span>“Run review now” on a flow’s review</span></div>
+    </div></div>
+    <div class="note" style="margin-top:14px"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6h.01"/></svg>
+      <span>The recurrence lives on the flow; the <b>Review all flows</b> toggle is on <b>Review Rules</b> (the active standard).</span></div>`;
+}
+
+/* one delegated handler for all grid row clicks */
+document.addEventListener('click', async e=>{
+  const tr=e.target.closest('.dgt tbody tr'); if(!tr) return;
+  if(tr.dataset.goto){ switchView(tr.dataset.goto); return; }
+  if(tr.dataset.id){ openDetail(tr.dataset.id); return; }
+  if(tr.dataset.flow){ if(!LIVE){ toast('Preview — this would open the flow’s review.'); return; }
+    try{ const fr=await DS.latestReviewForFlow(tr.dataset.flow); if(fr) openDetail(fr); else toast('No review recorded yet for this flow.'); }
+    catch(err){ toast('Could not open: '+(err.message||err),'err'); } }
+});
+
+const SECTION_LOADERS = { std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, standards:loadStandards, schedule:loadSchedule };
 function switchView(v){
   document.querySelectorAll('.segmented button').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
-  document.getElementById('view-'+v).classList.add('active');
-  if(v==='std') loadStandard();
+  const el=document.getElementById('view-'+v); if(el) el.classList.add('active');
+  if(SECTION_LOADERS[v]) SECTION_LOADERS[v]();
+  window.scrollTo(0,0);
 }
 document.querySelectorAll('.segmented button').forEach(b=> b.addEventListener('click',()=>switchView(b.dataset.view)));
 document.getElementById('flowRows').addEventListener('click',e=>{ const tr=e.target.closest('tr[data-id]'); if(tr) openDetail(tr.dataset.id); });
@@ -952,6 +1128,9 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   const nm=(meta.user||'').trim(), parts=nm?nm.split(/\s+/).filter(Boolean):[];
   const initials = parts.length>=2 ? (parts[0][0]+parts[1][0]).toUpperCase() : (parts[0]?parts[0].slice(0,2).toUpperCase():'··');
   const av=document.getElementById('userAvatar'); if(av){ av.textContent=initials; av.title = nm?('Signed in as '+nm):'Signed-in user (WhoAmI)'; }
+  // Embedded in the model-driven app, the native site map drives navigation, so
+  // hide the in-page section nav. Standalone (preview) keeps it for browsing.
+  if(meta.live){ const nav=document.getElementById('sectionNav'); if(nav) nav.style.display='none'; }
   await loadDashboard();
   const searchEl=document.getElementById('flowSearch');
   if(searchEl) searchEl.addEventListener('input', ()=>{
@@ -968,7 +1147,13 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   const page = (q.get('data') || q.get('page') || '').toLowerCase();
   const PAGE_MAP = { dashboard:'dash', dash:'dash', tenant:'dash', 'tenant-dashboard':'dash',
     flow:'flow', flowreview:'flow', 'flow-review':'flow',
-    standard:'std', standards:'std', rules:'std', 'standard-rules':'std', std:'std' };
+    flowinventory:'flowinventory', 'flow-inventory':'flowinventory', inventory:'flowinventory',
+    reviewruns:'reviewruns', 'review-runs':'reviewruns', runs:'reviewruns',
+    flowreviews:'flowreviews', 'flow-reviews':'flowreviews',
+    findings:'findings',
+    standards:'standards', 'review-standards':'standards',
+    rules:'std', 'review-rules':'std', standard:'std', 'standard-rules':'std', std:'std',
+    schedule:'schedule', 'crawl-schedule':'schedule' };
   if (PAGE_MAP[page]) switchView(PAGE_MAP[page]);
   const deep = q.get('flowReviewId') || q.get('id');
   if(deep) openDetail(deep);

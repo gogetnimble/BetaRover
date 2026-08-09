@@ -7,6 +7,7 @@ Dataverse environment, in two pieces that reflect what each tool does best:
 |-------|------------------|-----|
 | [`package/`](package) | Publisher, solution container (**Ember**), and the **web resource** | import the `.zip` |
 | [`provision/`](provision) | The **9 global choices** + **6 tables** (columns, lookups, alternate key) + optional seed data | run the Node script |
+| [`app/`](app) | The **model-driven app site map** — every menu item opens the web resource at a `?data=` section | build in the maker portal |
 
 Choices and tables are provisioned by script rather than baked into the solution
 XML on purpose: creating them through the Dataverse Web API auto-generates the

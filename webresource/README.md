@@ -54,17 +54,17 @@ Open the file and edit the `CONFIG` and `CHOICES` blocks at the top of the
 Reads use OData **formatted values** (no config); **writes** (creating a rule,
 queuing an on-demand run) need the choice **integers**.
 
-**If you imported the shipped solution** ([`solution/package`](../solution/package)),
-the global choices have deterministic values — `severity` Info=1/Warning=2/…,
-`runStatus` Queued=1/…, `triggerSrc` schedule=1/ondemand=2, `category`
-Naming=1/… — and the default `CHOICES` block **already matches them**. Nothing
-to change.
+**If you ran the provisioning script** ([`solution/provision`](../solution/provision)),
+the global choices are created with deterministic values in the publisher's
+option-value-prefix range — `severity` Info=100000000/…, `runStatus`
+Queued=100000000/…, `triggerSrc` schedule=100000000/ondemand=100000001,
+`category` Naming=100000000/… — and the default `CHOICES` block **already matches
+them**. Nothing to change.
 
-**If you authored the choices by hand instead**, they'll get
-environment-specific integers (often `121570000`); set the four maps to match.
-Find the values in the maker portal (each choice's option list) or via
-`GET [org]/api/data/v9.2/GlobalOptionSetDefinitions`. A write that fails with a
-choice error means these are off.
+**If you created the choices some other way**, they'll get different integers;
+set the four maps to match. Find the values in the maker portal (each choice's
+option list) or via `GET [org]/api/data/v9.2/GlobalOptionSetDefinitions`. A write
+that fails with a choice error means these are off.
 
 ## Register and surface it
 

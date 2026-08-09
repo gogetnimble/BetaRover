@@ -2,23 +2,24 @@
 /**
  * Provision the six Ember tables into a Dataverse environment.
  *
- * The importable solution (../package) carries the publisher, the global choices,
- * and the web resource. Hand-authoring import-valid table + form + view XML is
- * fragile, so the tables are created here through the Dataverse Web API instead —
- * which auto-generates the default forms and views for you. Everything is read
- * from ../schema/tables.json, so the spec stays the single source of truth.
+ * The importable solution (../package) carries the publisher and the web resource.
+ * This script creates the global choices AND the tables through the Dataverse Web
+ * API — the supported path that auto-generates default forms/views and assigns
+ * choice values in the publisher's option-value-prefix range. (Hand-authoring
+ * that XML in the solution is fragile — it is why an earlier build failed import.)
+ * Tables are read from ../schema/tables.json, so the spec stays the single source
+ * of truth.
  *
  * Idempotent: existing tables/columns/keys are detected and skipped, so it is
  * safe to re-run after editing the schema.
  *
  * USAGE
- *   Import ../package/BetaRoverFlowReview_1_0_0_0.zip FIRST (creates the choices),
- *   then:
+ *   Import ../package/Ember_1_0_0_0.zip (publisher + web resource), then:
  *
  *     export DATAVERSE_URL="https://yourorg.crm.dynamics.com"
  *     export DATAVERSE_TOKEN="$(az account get-access-token \
  *        --resource https://yourorg.crm.dynamics.com --query accessToken -o tsv)"
- *     node provision.mjs            # create tables + columns + keys
+ *     node provision.mjs            # create global choices + tables + columns + keys
  *     node provision.mjs --seed     # ...and import the default standard + rules
  *
  * The token must belong to a user who can customise the environment. No npm
@@ -31,7 +32,7 @@ import { dirname, join } from 'node:path';
 const __dir = dirname(fileURLToPath(import.meta.url));
 const URL_BASE = (process.env.DATAVERSE_URL || '').replace(/\/+$/, '');
 const TOKEN = process.env.DATAVERSE_TOKEN || '';
-const SOLUTION = process.env.SOLUTION_UNIQUE_NAME || 'BetaRoverFlowReview';
+const SOLUTION = process.env.SOLUTION_UNIQUE_NAME || 'Ember';
 const LCID = 1033;
 const SEED = process.argv.includes('--seed');
 
@@ -76,6 +77,38 @@ async function api(method, path, body, extraHeaders = {}) {
 }
 const solHeader = { 'MSCRM.SolutionUniqueName': SOLUTION };
 const label = (t) => ({ '@odata.type': 'Microsoft.Dynamics.CRM.Label', LocalizedLabels: [{ '@odata.type': 'Microsoft.Dynamics.CRM.LocalizedLabel', Label: t, LanguageCode: LCID }] });
+
+/* Global choices, created via the Web API with values in the publisher's
+ * option-value-prefix range (10000xxxxx). These values are deterministic and
+ * match the web resource's CHOICES map, so no per-environment choice hunting. */
+const OPTIONSETS = {
+  br_severity:        { label: 'Severity',           opts: [['Info',100000000],['Warning',100000001],['Error',100000002],['Critical',100000003]] },
+  br_rulecategory:    { label: 'Rule category',      opts: [['Naming',100000000],['ErrorHandling',100000001],['Logging',100000002],['Configuration',100000003],['Security',100000004],['Email',100000005],['General',100000006]] },
+  br_findingstatus:   { label: 'Finding status',     opts: [['pass',100000000],['warning',100000001],['fail',100000002],['not_applicable',100000003]] },
+  br_ownertype:       { label: 'Owner type',         opts: [['user',100000000],['application',100000001],['team',100000002],['unknown',100000003]] },
+  br_flowstate:       { label: 'Flow state',         opts: [['Draft',100000000],['Activated',100000001],['Suspended',100000002]] },
+  br_flowsource:      { label: 'Inventory source',   opts: [['dataverse',100000000],['managementapi',100000001],['both',100000002]] },
+  br_runstatus:       { label: 'Run status',         opts: [['Queued',100000000],['Running',100000001],['Completed',100000002],['Failed',100000003]] },
+  br_flowreviewstatus:{ label: 'Flow review status', opts: [['Pass',100000000],['Warning',100000001],['Fail',100000002]] },
+  br_triggersource:   { label: 'Trigger source',     opts: [['schedule',100000000],['ondemand',100000001]] },
+};
+async function optionSetExists(name) {
+  try { await api('GET', `GlobalOptionSetDefinitions(Name='${name}')?$select=Name`); return true; }
+  catch (e) { if (e.status === 404) return false; throw e; }
+}
+async function createGlobalOptionSets() {
+  console.log('Global choices');
+  for (const [name, def] of Object.entries(OPTIONSETS)) {
+    if (await optionSetExists(name)) { console.log(`      = ${name}`); continue; }
+    await api('POST', 'GlobalOptionSetDefinitions', {
+      '@odata.type': 'Microsoft.Dynamics.CRM.OptionSetMetadata',
+      Name: name, OptionSetType: 'Picklist', IsGlobal: true, IsCustomizable: { Value: true },
+      DisplayName: label(def.label),
+      Options: def.opts.map(([lbl, val]) => ({ '@odata.type': 'Microsoft.Dynamics.CRM.OptionMetadata', Value: val, Label: label(lbl) })),
+    }, solHeader);
+    console.log(`      + ${name}`);
+  }
+}
 
 async function entityExists(logical) {
   try { await api('GET', `EntityDefinitions(LogicalName='${logical}')?$select=LogicalName`); return true; }
@@ -225,7 +258,11 @@ async function createAltKey(table) {
 
 async function main() {
   const spec = JSON.parse(await readFile(join(__dir, '..', 'schema', 'tables.json'), 'utf8'));
-  console.log(`Provisioning ${spec.tables.length} tables into ${URL_BASE} (solution ${SOLUTION})\n`);
+  console.log(`Provisioning into ${URL_BASE} (solution ${SOLUTION})\n`);
+
+  // Pass 0: global choices (choice columns bind to these)
+  await createGlobalOptionSets();
+  console.log('');
 
   // Pass 1: entities + non-lookup attributes
   for (const table of spec.tables) {

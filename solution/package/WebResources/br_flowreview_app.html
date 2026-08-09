@@ -459,10 +459,10 @@ const CONFIG = {
    Only used on WRITE (creating a rule / queuing an on-demand run). Reads use
    OData formatted values and don't need these. See README → choice values. */
 const CHOICES = {
-  category:   { Naming:1, ErrorHandling:2, Logging:3, Configuration:4, Security:5, Email:6, General:7 },
-  severity:   { info:1, warning:2, error:3, critical:4 },
-  runStatus:  { Queued:1, Running:2, Completed:3, Failed:4 },
-  triggerSrc: { schedule:1, ondemand:2 }
+  category:   { Naming:100000000, ErrorHandling:100000001, Logging:100000002, Configuration:100000003, Security:100000004, Email:100000005, General:100000006 },
+  severity:   { info:100000000, warning:100000001, error:100000002, critical:100000003 },
+  runStatus:  { Queued:100000000, Running:100000001, Completed:100000002, Failed:100000003 },
+  triggerSrc: { schedule:100000000, ondemand:100000001 }
 };
 
 /* ============================ XRM / DATA LAYER ============================ */

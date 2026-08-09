@@ -5,7 +5,7 @@
     "description": "Publisher prefix for the Ember solution. Change to match your own publisher before deploying."
   },
   "solution": {
-    "uniqueName": "BetaRoverFlowReview",
+    "uniqueName": "Ember",
     "friendlyName": "Ember"
   },
   "note": "Deployable specification for the Dataverse tables. Author these via the maker portal, `pac`, or a deployment script. Choice option-set values are illustrative; adjust to your org's conventions.",

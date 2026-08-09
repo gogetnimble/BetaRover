@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ImportExportXml version="9.2.0.0" SolutionPackageVersion="9.2" languagecode="1033" generatedBy="BetaRover" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <SolutionManifest>
-    <UniqueName>BetaRoverFlowReview</UniqueName>
+    <UniqueName>Ember</UniqueName>
     <LocalizedNames>
       <LocalizedName description="Ember" languagecode="1033" />
     </LocalizedNames>
     <Descriptions>
-      <Description description="Crawls a tenant for Power Automate cloud flows and code-reviews them against a configurable delivery standard. This solution carries the global choices and the review web resource; run the provisioning script to add the six tables." languagecode="1033" />
+      <Description description="Crawls a tenant for Power Automate cloud flows and code-reviews them against a configurable delivery standard. This solution carries the review web resource; run the provisioning script to add the tables and global choices." languagecode="1033" />
     </Descriptions>
     <Version>1.0.0.0</Version>
     <Managed>0</Managed>
@@ -83,15 +83,6 @@
     </Publisher>
     <RootComponents>
       <RootComponent type="61" schemaName="br_flowreview_app.html" behavior="0" />
-      <RootComponent type="9" schemaName="br_severity" behavior="0" />
-      <RootComponent type="9" schemaName="br_rulecategory" behavior="0" />
-      <RootComponent type="9" schemaName="br_findingstatus" behavior="0" />
-      <RootComponent type="9" schemaName="br_ownertype" behavior="0" />
-      <RootComponent type="9" schemaName="br_flowstate" behavior="0" />
-      <RootComponent type="9" schemaName="br_flowsource" behavior="0" />
-      <RootComponent type="9" schemaName="br_runstatus" behavior="0" />
-      <RootComponent type="9" schemaName="br_flowreviewstatus" behavior="0" />
-      <RootComponent type="9" schemaName="br_triggersource" behavior="0" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

@@ -5,28 +5,28 @@ Dataverse environment, in two pieces that reflect what each tool does best:
 
 | Piece | What it delivers | How |
 |-------|------------------|-----|
-| [`package/`](package) | Publisher, solution container, the **9 global choices**, and the **web resource** | import the `.zip` |
-| [`provision/`](provision) | The **6 tables** (columns, lookups, alternate key) + optional seed data | run the Node script |
+| [`package/`](package) | Publisher, solution container (**Ember**), and the **web resource** | import the `.zip` |
+| [`provision/`](provision) | The **9 global choices** + **6 tables** (columns, lookups, alternate key) + optional seed data | run the Node script |
 
-Tables are provisioned by script rather than baked into the solution XML on
-purpose: creating them through the Dataverse Web API auto-generates the default
-forms and views (which hand-authored solution XML would have to carry and get
-exactly right), and it reads straight from
-[`schema/tables.json`](schema/tables.json) so the spec stays the one source of
-truth. The choices ship in the solution so their **option values are
-deterministic** (Info=1, Warning=2, … — matching the web resource's `CHOICES`
-map out of the box) instead of environment-assigned.
+Choices and tables are provisioned by script rather than baked into the solution
+XML on purpose: creating them through the Dataverse Web API auto-generates the
+default forms/views and assigns choice option values in the publisher's
+option-value-prefix range — whereas hand-authored option-set XML with low values
+makes the importer throw `0x80048030` (an early build hit exactly that). The
+script reads straight from [`schema/tables.json`](schema/tables.json) so the spec
+stays the one source of truth, and the choice values it assigns (`100000000…`)
+match the web resource's `CHOICES` map out of the box.
 
 ## Order of operations
 
 ```bash
 # 1. Pack the importable zip (or use the one in package/, if committed)
 cd solution/package
-zip -r -X ../BetaRoverFlowReview_1_0_0_0.zip . -x '.*'
+zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
 
-# 2. Import BetaRoverFlowReview_1_0_0_0.zip via the maker portal
+# 2. Import Ember_1_0_0_0.zip via the maker portal
 #    (make.powerapps.com → Solutions → Import solution) or:
-#    pac solution import --path ../BetaRoverFlowReview_1_0_0_0.zip
+#    pac solution import --path ../Ember_1_0_0_0.zip
 
 # 3. Provision the six tables (+ seed the default standard/rules)
 cd ../provision
@@ -46,8 +46,8 @@ Classic unmanaged solution layout, directly importable and also packable with
 
 ```
 package/
-  solution.xml            # manifest: publisher (br), version, root components
-  customizations.xml      # 9 global choices + the web resource
+  solution.xml            # manifest: solution Ember, publisher (br), root components
+  customizations.xml      # the web resource (choices are created by the script)
   [Content_Types].xml
   WebResources/
     br_flowreview_app.html # the UI (kept in sync with ../../webresource/)
@@ -57,7 +57,7 @@ Re-pack after editing the web resource:
 
 ```bash
 cp ../../webresource/br_flowreview_app.html package/WebResources/
-cd package && zip -r -X ../BetaRoverFlowReview_1_0_0_0.zip . -x '.*'
+cd package && zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
 ```
 
 Bump `<Version>` in `solution.xml` for each release.

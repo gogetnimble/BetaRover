@@ -38,23 +38,26 @@ At a glance:
 The solution ships in two pieces (full detail in
 [`solution/README.md`](../solution/README.md)):
 
-1. **Import the solution zip** — `BetaRoverFlowReview` carries the publisher, the
-   **9 global choices**, and the **web resource**. Pack and import:
+1. **Import the solution zip** — `Ember` carries the publisher and the **web
+   resource**. Pack and import:
 
    ```bash
-   cd solution/package && zip -r -X ../BetaRoverFlowReview_1_0_0_0.zip . -x '.*'
+   cd solution/package && zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
    # make.powerapps.com → Solutions → Import, or:
-   pac solution import --path solution/BetaRoverFlowReview_1_0_0_0.zip
+   pac solution import --path solution/Ember_1_0_0_0.zip
    ```
 
-   Because the choices ship in the solution, their option values are
-   **deterministic** (Info=1, Warning=2, Queued=1, ondemand=2, …) and already
-   match the web resource's `CHOICES` map — no per-environment choice hunting.
-
-2. **Provision the six tables** from
+2. **Provision the choices + six tables** from
    [`solution/schema/tables.json`](../solution/schema/tables.json) via the
    Web API (auto-generates default forms/views), landing them in the imported
-   solution:
+   solution. The script creates the **9 global choices** first, with values in
+   the publisher's option-value-prefix range (`100000000…`) that match the web
+   resource's `CHOICES` map — so there's no per-environment choice hunting.
+
+   > The choices are created by the script, **not** hand-authored in the solution
+   > XML: option values below the publisher prefix range make the solution
+   > importer throw `0x80048030` ("Object reference not set…"), which is exactly
+   > what an earlier build hit. The Web API path assigns valid values.
 
    ```bash
    cd solution/provision
@@ -142,8 +145,8 @@ Then add the UI web resource:
 
 1. Add web resource **`br_flowreview_app`** (type *Webpage (HTML)*) from
    [`webresource/br_flowreview_app.html`](../webresource/br_flowreview_app.html).
-2. **Configure it** — the `CHOICES` block already matches the deterministic
-   values shipped by the solution (step 2), so it works as-is. You only touch
+2. **Configure it** — the `CHOICES` block already matches the values the
+   provisioning script assigns (step 2), so it works as-is. You only touch
    `CONFIG` if you changed the publisher prefix or the lookup navigation
    property names. Full instructions:
    [`webresource/README.md`](../webresource/README.md).

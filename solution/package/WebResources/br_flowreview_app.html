@@ -961,8 +961,15 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
     const m=DASH_FLOWS.filter(f=>`${f.name} ${f.owner} ${f.environment}`.toLowerCase().includes(q));
     renderFlowRows(m.slice(0,25));
   });
-  // deep-link: ?flowReviewId=<guid> opens a specific review
+  // site-map / deep-link routing.
+  // A model-driven app subarea passes its configured value as ?data=<page>
+  // (with passParams enabled), so each menu item opens the right section here.
   const q = new URLSearchParams(location.search);
+  const page = (q.get('data') || q.get('page') || '').toLowerCase();
+  const PAGE_MAP = { dashboard:'dash', dash:'dash', tenant:'dash', 'tenant-dashboard':'dash',
+    flow:'flow', flowreview:'flow', 'flow-review':'flow',
+    standard:'std', standards:'std', rules:'std', 'standard-rules':'std', std:'std' };
+  if (PAGE_MAP[page]) switchView(PAGE_MAP[page]);
   const deep = q.get('flowReviewId') || q.get('id');
   if(deep) openDetail(deep);
 })();

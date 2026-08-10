@@ -1910,9 +1910,10 @@ async function loadIdentity(){
   loadIdentity();   // WhoAmI + systemuser → richer avatar tooltip + profile popover
   // Embedded in the model-driven app, the native site map drives navigation, so
   // hide the in-page section nav. Standalone (preview) keeps it for browsing.
-  // Embedded (Live): the native site map drives navigation, so hide the in-page
-  // tab group — but keep the toolbar so the global Environment filter stays visible.
-  if(meta.live){ const seg=document.getElementById('segNav'); if(seg) seg.style.display='none'; }
+  // Embedded (Live, or a host that sets window.EMBER_EMBED — e.g. the app-shell
+  // mockup): the native site map drives navigation, so hide the in-page tab group,
+  // but keep the toolbar so the global Environment filter stays visible.
+  if(meta.live || window.EMBER_EMBED){ const seg=document.getElementById('segNav'); if(seg) seg.style.display='none'; }
   await loadDashboard();
   const searchEl=document.getElementById('flowSearch');
   if(searchEl) searchEl.addEventListener('input', ()=>{
@@ -1932,7 +1933,7 @@ async function loadIdentity(){
   // A model-driven app subarea passes its configured value as ?data=<page>
   // (with passParams enabled), so each menu item opens the right section here.
   const q = new URLSearchParams(location.search);
-  const page = (q.get('data') || q.get('page') || '').toLowerCase();
+  const page = (q.get('data') || q.get('page') || window.EMBER_DATA || '').toLowerCase();
   const PAGE_MAP = { dashboard:'dash', dash:'dash', tenant:'dash', 'tenant-dashboard':'dash',
     flow:'flow', flowreview:'flow', 'flow-review':'flow',
     flowinventory:'flowinventory', 'flow-inventory':'flowinventory', inventory:'flowinventory',

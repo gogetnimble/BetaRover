@@ -345,7 +345,7 @@
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
     </button>
     <span class="statuspill preview" id="statusPill"><span class="dot"></span>Preview</span>
-    <div class="havatar" id="userAvatar" title="Signed-in user (WhoAmI)">··</div>
+    <div class="havatar" id="userAvatar" title="Signed-in user">··</div>
   </header>
 
   <!-- In-page nav (mirrors the app site map). Hidden when embedded — the
@@ -1555,7 +1555,7 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   pill.innerHTML = `<span class="dot"></span>${meta.live?'Live':'Preview'}`;
   const nm=(meta.user||'').trim(), parts=nm?nm.split(/\s+/).filter(Boolean):[];
   const initials = parts.length>=2 ? (parts[0][0]+parts[1][0]).toUpperCase() : (parts[0]?parts[0].slice(0,2).toUpperCase():'··');
-  const av=document.getElementById('userAvatar'); if(av){ av.textContent=initials; av.title = nm?('Signed in as '+nm):'Signed-in user (WhoAmI)'; }
+  const av=document.getElementById('userAvatar'); if(av){ av.textContent=initials; av.title = nm?('Signed in as '+nm):'Signed-in user'; }
   // Embedded in the model-driven app, the native site map drives navigation, so
   // hide the in-page section nav. Standalone (preview) keeps it for browsing.
   if(meta.live){ const nav=document.getElementById('sectionNav'); if(nav) nav.style.display='none'; }

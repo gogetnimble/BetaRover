@@ -343,6 +343,9 @@
       <button data-view="reviewruns" role="tab">Review Runs</button>
       <button data-view="flowreviews" role="tab">Flow Reviews</button>
       <button data-view="findings" role="tab">Findings</button>
+      <button data-view="testcoverage" role="tab">Test Coverage</button>
+      <button data-view="testcases" role="tab">Test Cases</button>
+      <button data-view="testruns" role="tab">Test Runs</button>
       <button data-view="standards" role="tab">Review Standards</button>
       <button data-view="std" role="tab">Review Rules</button>
       <button data-view="schedule" role="tab">Crawl Schedule</button>
@@ -434,6 +437,9 @@
   <section class="view" id="view-reviewruns"><div class="grid-shell" id="grid-reviewruns"></div></section>
   <section class="view" id="view-flowreviews"><div class="grid-shell" id="grid-flowreviews"></div></section>
   <section class="view" id="view-findings"><div class="grid-shell" id="grid-findings"></div></section>
+  <section class="view" id="view-testcoverage"><div class="grid-shell" id="grid-testcoverage"></div></section>
+  <section class="view" id="view-testcases"><div class="grid-shell" id="grid-testcases"></div></section>
+  <section class="view" id="view-testruns"><div class="grid-shell" id="grid-testruns"></div></section>
   <section class="view" id="view-standards"><div class="grid-shell" id="grid-standards"></div></section>
   <section class="view" id="view-schedule"><div class="grid-shell" id="grid-schedule"></div></section>
 </div>
@@ -503,11 +509,13 @@ const CONFIG = {
   complianceThreshold: 70,           // score >= this counts as "compliant"
   entities: {                        // logical names (singular) → Web API set names (plural)
     standard:'bvr_reviewstandard', rule:'bvr_reviewrule', inventory:'bvr_flowinventory',
-    run:'bvr_reviewrun', flowreview:'bvr_flowreview', finding:'bvr_reviewfinding'
+    run:'bvr_reviewrun', flowreview:'bvr_flowreview', finding:'bvr_reviewfinding',
+    testcase:'bvr_flowtestcase', testrun:'bvr_flowtestrun'
   },
   navProps: {                        // navigation property names for $expand / @odata.bind
     reviewToInventory:'bvr_flowinventoryid',   // single-valued (flowreview → inventory)
-    ruleToStandard:'bvr_standardid'            // single-valued (rule → standard)
+    ruleToStandard:'bvr_standardid',           // single-valued (rule → standard)
+    testToInventory:'bvr_flowinventoryid'      // single-valued (test case / test run → inventory)
   },
   poll: { intervalMs:4000, timeoutMs:180000 } // on-demand run polling
 };
@@ -613,6 +621,30 @@ const Live = {
     return summariseInventory(r.entities.map(e=>({
       env:(e.bvr_environment||'').trim()||'—', state:String(fmt(e,'bvr_state')||'').toLowerCase(),
       reviewed:e.bvr_lastreviewedon||null, testPass:e.bvr_lasttestpassedon||null, cases:e.bvr_testcasecount||0 })));
+  },
+  async testCoverage(){
+    const envF = ENV ? `&$filter=bvr_environment eq '${odataEsc(ENV)}'` : '';
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,
+      `?$select=bvr_name,bvr_environment,bvr_state,bvr_testcasecount,bvr_lastreviewedon,bvr_lasttestpassedon${envF}&$orderby=bvr_name asc&$top=500`);
+    return r.entities.map(e=>({ name:e.bvr_name, env:e.bvr_environment||'', state:fmt(e,'bvr_state')||'',
+      cases:e.bvr_testcasecount||0, reviewed:e.bvr_lastreviewedon||null, testPass:e.bvr_lasttestpassedon||null }));
+  },
+  async testCases(){
+    const nav = CONFIG.navProps.testToInventory;
+    const envF = ENV ? `&$filter=${nav}/bvr_environment eq '${odataEsc(ENV)}'` : '';
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.testcase,
+      `?$select=bvr_name,bvr_enabled,bvr_description&$expand=${nav}($select=bvr_name,bvr_environment)${envF}&$orderby=bvr_name asc&$top=500`);
+    return r.entities.map(e=>{ const inv=e[nav]||{};
+      return { name:e.bvr_name, flow:inv.bvr_name||'', env:inv.bvr_environment||'', on:!!e.bvr_enabled, desc:e.bvr_description||'' }; });
+  },
+  async testRuns(){
+    const nav = CONFIG.navProps.testToInventory;
+    const envF = ENV ? `&$filter=${nav}/bvr_environment eq '${odataEsc(ENV)}'` : '';
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.testrun,
+      `?$select=bvr_name,bvr_status,bvr_passed,bvr_failed,bvr_durationms,bvr_ranon&$expand=${nav}($select=bvr_name,bvr_environment)${envF}&$orderby=bvr_ranon desc&$top=300`);
+    return r.entities.map(e=>{ const inv=e[nav]||{};
+      return { name:e.bvr_name, flow:inv.bvr_name||'', env:inv.bvr_environment||'', status:String(fmt(e,'bvr_status')||'').toLowerCase(),
+        passed:e.bvr_passed||0, failed:e.bvr_failed||0, ms:e.bvr_durationms||0, ranOn:e.bvr_ranon||null }; });
   },
   async flowReviews(runId){
     const nav = CONFIG.navProps.reviewToInventory;
@@ -768,6 +800,9 @@ const Demo = {
     if(ENV) rows = rows.filter(r=>r.env===ENV);
     return summariseInventory(rows);
   },
+  async testCoverage(){ return DEMO_COVERAGE.filter(r=>!ENV||r.env===ENV); },
+  async testCases(){ return DEMO_TESTCASES.filter(r=>!ENV||r.env===ENV); },
+  async testRuns(){ return DEMO_TESTRUNS.filter(r=>!ENV||r.env===ENV); },
   async flowReviews(){ return DEMO_FLOWS.slice(); },
   async severity(){ return { error:361, warning:554, info:289 }; },
   async ruleCompliance(){ return [
@@ -1099,8 +1134,8 @@ $('rmSave').addEventListener('click', async ()=>{
 /* ============================ TABS / THEME / INIT ============================ */
 /* ===================== RAW-TABLE SECTIONS (grids) ===================== */
 function _chip(v){ const s=String(v||'').toLowerCase();
-  if(['completed','pass','activated'].includes(s)) return 'pass';
-  if(['failed','fail','suspended'].includes(s)) return 'fail';
+  if(['completed','pass','passed','activated'].includes(s)) return 'pass';
+  if(['failed','fail','suspended','error'].includes(s)) return 'fail';
   if(s==='warning'||s==='warn') return 'warn';
   if(s==='running') return 'info';
   if(s==='queued'||s==='draft') return 'na';
@@ -1153,8 +1188,31 @@ const DEMO_STANDARDS=[
   {name:'CMA Power Automate Delivery Standard',code:'CMA-PA-STD',version:'1.0.0',active:true,_goto:'std'},
   {name:'CMA Power Automate Delivery Standard (draft)',code:'CMA-PA-STD',version:'1.1.0-draft',active:false,_goto:'std'}
 ];
+const DEMO_COVERAGE=[
+  {name:'CMA - Membership - Add new Roles on Contact Creation',env:'CMA — Production',state:'Activated',cases:4,reviewed:'2026-08-04T02:00:00Z',testPass:'2026-08-05T02:00:00Z'},
+  {name:'CMA - Finance - Nightly Invoice Sync',env:'CMA — Production',state:'Activated',cases:3,reviewed:'2026-08-04T02:00:00Z',testPass:'2026-08-01T02:00:00Z'},
+  {name:'CMA - Marketing - Event Reminder',env:'CMA — UAT',state:'Activated',cases:2,reviewed:'2026-08-04T02:00:00Z',testPass:null},
+  {name:'CMA - System - Validate Logger',env:'CMA — Production',state:'Activated',cases:5,reviewed:'2026-08-04T02:00:00Z',testPass:'2026-08-06T02:00:00Z'},
+  {name:'Membership Renewal Reminder',env:'CMA — Production',state:'Activated',cases:0,reviewed:'2026-08-04T02:00:00Z',testPass:null},
+  {name:'Copy of Send Weekly Digest',env:'CMA — Dev',state:'Suspended',cases:0,reviewed:null,testPass:null}
+];
+const DEMO_TESTCASES=[
+  {name:'Happy path · role added',flow:'CMA - Membership - Add new Roles on Contact Creation',env:'CMA — Production',on:true,desc:'Contact created with Member type → role row created, logger called.'},
+  {name:'Empty roles collection',flow:'CMA - Membership - Add new Roles on Contact Creation',env:'CMA — Production',on:true,desc:'Apply-to-each over empty collection → no error, Finally runs.'},
+  {name:'Catch path · Dataverse 500',flow:'CMA - Membership - Add new Roles on Contact Creation',env:'CMA — Production',on:true,desc:'Create row mocked to fail → Catch logs, Finally runs.'},
+  {name:'Config row present',flow:'CMA - Finance - Nightly Invoice Sync',env:'CMA — Production',on:true,desc:'Flow Configuration list returns 1 row → values bound.'},
+  {name:'Logger invoked on failure',flow:'CMA - System - Validate Logger',env:'CMA — Production',on:true,desc:'Child logger receives Level/Source/Event Details.'},
+  {name:'Reminder skipped when opted-out',flow:'CMA - Marketing - Event Reminder',env:'CMA — UAT',on:false,desc:'Contact opted out → Send email branch skipped.'}
+];
+const DEMO_TESTRUNS=[
+  {name:'Nightly test · 06 Aug',flow:'CMA - System - Validate Logger',env:'CMA — Production',status:'passed',passed:5,failed:0,ms:820,ranOn:'2026-08-06T02:10:00Z'},
+  {name:'Nightly test · 05 Aug',flow:'CMA - Membership - Add new Roles on Contact Creation',env:'CMA — Production',status:'passed',passed:4,failed:0,ms:1360,ranOn:'2026-08-05T02:10:00Z'},
+  {name:'On-demand · Invoice Sync',flow:'CMA - Finance - Nightly Invoice Sync',env:'CMA — Production',status:'failed',passed:2,failed:1,ms:640,ranOn:'2026-08-01T14:03:00Z'},
+  {name:'On-demand · Event Reminder',flow:'CMA - Marketing - Event Reminder',env:'CMA — UAT',status:'error',passed:0,failed:0,ms:120,ranOn:'2026-07-30T09:00:00Z'}
+];
 
 let INV_LOADED=false, RUNS_LOADED=false, FR_LOADED=false, FIND_LOADED=false, STDS_LOADED=false, SCH_LOADED=false;
+let TCOV_LOADED=false, TCASE_LOADED=false, TRUN_LOADED=false;
 async function loadInventory(){ if(INV_LOADED) return; INV_LOADED=true;
   const host=document.getElementById('grid-flowinventory'); host.innerHTML=spinCard;
   try{ let rows;
@@ -1210,6 +1268,31 @@ async function loadStandards(){ if(STDS_LOADED) return; STDS_LOADED=true;
       columns:[{key:'name',label:'Name'},{key:'code',label:'Code',render:v=>`<span class="mono">${esc(v)}</span>`},{key:'version',label:'Version',render:v=>`<span class="mono">${esc(v)}</span>`},{key:'active',label:'Active',render:v=>v?'<span class="chip pass">Yes</span>':'<span class="chip na">No</span>'}], rows });
   }catch(err){ STDS_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
 }
+async function loadTestCoverage(){ if(TCOV_LOADED) return; TCOV_LOADED=true;
+  const host=document.getElementById('grid-testcoverage'); host.innerHTML=spinCard;
+  try{ const rows=(await DS.testCoverage()).map(r=>({ name:r.name, env:r.env, state:r.state, cases:r.cases,
+      reviewed:dayDate(r.reviewed), tested:dayDate(r.testPass),
+      _val:(r.cases>0&&r.testPass)?'Validated':(r.cases>0?'Not passed':'No tests') }));
+    const rVal=v=>{ const s=String(v).toLowerCase(); const c=s==='validated'?'pass':(s==='no tests'?'na':'fail'); return `<span class="chip ${c}">${esc(v)}</span>`; };
+    dgrid('grid-testcoverage',{ title:'Test Coverage', entity:CONFIG.entities.inventory, sub:'flows by environment · last static review vs last unit-test pass',
+      columns:[{key:'name',label:'Flow'},{key:'env',label:'Environment'},{key:'state',label:'State',render:rStateS},{key:'cases',label:'Test cases'},{key:'reviewed',label:'Last reviewed'},{key:'tested',label:'Last test pass'},{key:'_val',label:'Validated',render:rVal}], rows });
+  }catch(err){ TCOV_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadTestCases(){ if(TCASE_LOADED) return; TCASE_LOADED=true;
+  const host=document.getElementById('grid-testcases'); host.innerHTML=spinCard;
+  try{ const rows=(await DS.testCases()).map(r=>({ name:r.name, flow:r.flow, env:r.env, on:r.on, desc:r.desc }));
+    const rOn=v=>v?'<span class="chip pass">On</span>':'<span class="chip na">Off</span>';
+    dgrid('grid-testcases',{ title:'Test Cases', entity:CONFIG.entities.testcase, sub:'mocked unit tests · click nothing — edit in the table',
+      columns:[{key:'name',label:'Case'},{key:'flow',label:'Flow'},{key:'env',label:'Environment'},{key:'on',label:'Enabled',render:rOn},{key:'desc',label:'What it pins / asserts'}], rows });
+  }catch(err){ TCASE_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
+async function loadTestRuns(){ if(TRUN_LOADED) return; TRUN_LOADED=true;
+  const host=document.getElementById('grid-testruns'); host.innerHTML=spinCard;
+  try{ const rows=(await DS.testRuns()).map(r=>({ name:r.name, flow:r.flow, env:r.env, status:r.status, p:r.passed, f:r.failed, dur:(r.ms/1000).toFixed(1)+'s', ranOn:shortDate(r.ranOn) }));
+    dgrid('grid-testruns',{ title:'Test Runs', entity:CONFIG.entities.testrun, sub:'mock-execution results · newest first',
+      columns:[{key:'name',label:'Run'},{key:'flow',label:'Flow'},{key:'env',label:'Environment'},{key:'status',label:'Status',render:rChipS},{key:'p',label:'Passed'},{key:'f',label:'Failed'},{key:'dur',label:'Duration'},{key:'ranOn',label:'Ran on'}], rows });
+  }catch(err){ TRUN_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
+}
 async function loadSchedule(){ if(SCH_LOADED) return; SCH_LOADED=true;
   let std=null; try{ std=await DS.activeStandard(); }catch(_){}
   const allf = std && std.reviewAllFlows;
@@ -1240,8 +1323,8 @@ document.addEventListener('click', async e=>{
     catch(err){ toast('Could not open: '+(err.message||err),'err'); } }
 });
 
-const SECTION_LOADERS = { dash:loadDashboard, std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, standards:loadStandards, schedule:loadSchedule };
-function resetSectionData(){ DASH_LOADED=INV_LOADED=RUNS_LOADED=FR_LOADED=FIND_LOADED=STDS_LOADED=SCH_LOADED=false; }
+const SECTION_LOADERS = { dash:loadDashboard, std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, testcoverage:loadTestCoverage, testcases:loadTestCases, testruns:loadTestRuns, standards:loadStandards, schedule:loadSchedule };
+function resetSectionData(){ DASH_LOADED=INV_LOADED=RUNS_LOADED=FR_LOADED=FIND_LOADED=STDS_LOADED=SCH_LOADED=false; TCOV_LOADED=TCASE_LOADED=TRUN_LOADED=false; }
 function currentView(){ const el=document.querySelector('.view.active'); return el? el.id.replace('view-','') : 'dash'; }
 function reloadForEnv(){ resetSectionData(); (SECTION_LOADERS[currentView()]||loadDashboard)(); }
 function switchView(v){
@@ -1296,6 +1379,9 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
     reviewruns:'reviewruns', 'review-runs':'reviewruns', runs:'reviewruns',
     flowreviews:'flowreviews', 'flow-reviews':'flowreviews',
     findings:'findings',
+    testcoverage:'testcoverage', 'test-coverage':'testcoverage', coverage:'testcoverage', unittesting:'testcoverage', 'unit-testing':'testcoverage',
+    testcases:'testcases', 'test-cases':'testcases', cases:'testcases',
+    testruns:'testruns', 'test-runs':'testruns',
     standards:'standards', 'review-standards':'standards',
     rules:'std', 'review-rules':'std', standard:'std', 'standard-rules':'std', std:'std',
     schedule:'schedule', 'crawl-schedule':'schedule' };

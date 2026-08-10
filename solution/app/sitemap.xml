@@ -11,6 +11,9 @@
      Review Runs      -> ?data=reviewruns
      Flow Reviews     -> ?data=flowreviews
      Findings         -> ?data=findings
+     Test Coverage    -> ?data=testcoverage
+     Test Cases       -> ?data=testcases
+     Test Runs        -> ?data=testruns
      Review Standards -> ?data=standards
      Review Rules     -> ?data=rules
      Crawl Schedule   -> ?data=schedule
@@ -34,6 +37,15 @@
         <Titles><Title LCID="1033" Title="Flow Reviews" /></Titles></SubArea>
       <SubArea Id="sa_findings" Url="/WebResources/bvr_flowreview_app.html?data=findings">
         <Titles><Title LCID="1033" Title="Findings" /></Titles></SubArea>
+    </Group>
+    <Group Id="unittest_group">
+      <Titles><Title LCID="1033" Title="Unit Testing" /></Titles>
+      <SubArea Id="sa_testcoverage" Url="/WebResources/bvr_flowreview_app.html?data=testcoverage">
+        <Titles><Title LCID="1033" Title="Test Coverage" /></Titles></SubArea>
+      <SubArea Id="sa_testcases" Url="/WebResources/bvr_flowreview_app.html?data=testcases">
+        <Titles><Title LCID="1033" Title="Test Cases" /></Titles></SubArea>
+      <SubArea Id="sa_testruns" Url="/WebResources/bvr_flowreview_app.html?data=testruns">
+        <Titles><Title LCID="1033" Title="Test Runs" /></Titles></SubArea>
     </Group>
     <Group Id="config_group">
       <Titles><Title LCID="1033" Title="Configuration" /></Titles>

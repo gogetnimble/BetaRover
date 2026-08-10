@@ -42,6 +42,19 @@ Findings grids to that environment (server-side via `$filter` / a FetchXML
 `bvr_flowinventory` link; the severity donut and rule bars are scoped too).
 "All environments" clears it.
 
+### Unit Testing sections
+
+Three routable sections back the **Unit Testing** site-map group (all
+environment-filter aware):
+
+- **Test Coverage** (`?data=testcoverage`) — every flow by environment with its
+  **last static review** and **last unit-test pass** dates, test-case count, and
+  a Validated / Not passed / No tests badge (from `bvr_flowinventory`).
+- **Test Cases** (`?data=testcases`) — the mocked unit tests (`bvr_flowtestcase`),
+  each with its flow, enabled state, and what it pins/asserts.
+- **Test Runs** (`?data=testruns`) — mock-execution results (`bvr_flowtestrun`):
+  status, passed/failed counts, duration, and when it ran.
+
 ## Live vs Preview
 
 `getXrm()` looks for `Xrm.WebApi` on the window or its parent.

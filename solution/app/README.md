@@ -38,21 +38,24 @@ app + site map to the next environment cleanly.
    the web resource reads/writes them through the Web API directly).
 3. **Edit the site map.** In the app designer open the site map editor, choose
    **Switch to classic** (or edit the app's site map XML), and reproduce
-   [`sitemap.xml`](sitemap.xml): two groups (Review, Configuration) with the eight
-   subareas, each a **Web Resource** subarea whose **URL** is
+   [`sitemap.xml`](sitemap.xml): three groups (Review, Unit Testing, Configuration)
+   with the eleven subareas, each a **Web Resource** subarea whose **URL** is
    `/WebResources/bvr_flowreview_app.html?data=<section>` per the table below.
 4. **Save & Publish.**
 
-| Menu item | `data=` | Web-resource section |
-|-----------|---------|----------------------|
-| Dashboard | `dash` | Tenant dashboard |
-| Flow Inventory | `flowinventory` | `bvr_flowinventory` grid |
-| Review Runs | `reviewruns` | `bvr_reviewrun` grid |
-| Flow Reviews | `flowreviews` | latest run's `bvr_flowreview` grid |
-| Findings | `findings` | latest run's `bvr_reviewfinding` grid |
-| Review Standards | `standards` | `bvr_reviewstandard` grid |
-| Review Rules | `rules` | active standard + rules editor |
-| Crawl Schedule | `schedule` | schedule / Review-all-flows summary |
+| Group | Menu item | `data=` | Web-resource section |
+|-------|-----------|---------|----------------------|
+| Review | Dashboard | `dash` | Tenant dashboard |
+| Review | Flow Inventory | `flowinventory` | `bvr_flowinventory` grid |
+| Review | Review Runs | `reviewruns` | `bvr_reviewrun` grid |
+| Review | Flow Reviews | `flowreviews` | latest run's `bvr_flowreview` grid |
+| Review | Findings | `findings` | latest run's `bvr_reviewfinding` grid |
+| Unit Testing | Test Coverage | `testcoverage` | flows by env · last review vs last test pass |
+| Unit Testing | Test Cases | `testcases` | `bvr_flowtestcase` grid |
+| Unit Testing | Test Runs | `testruns` | `bvr_flowtestrun` grid |
+| Configuration | Review Standards | `standards` | `bvr_reviewstandard` grid |
+| Configuration | Review Rules | `rules` | active standard + rules editor |
+| Configuration | Crawl Schedule | `schedule` | schedule / Review-all-flows summary |
 
 Clicking a flow in any grid opens its **Flow Review** (drill-down inside the web
 resource); clicking a run opens that run's Flow Reviews.

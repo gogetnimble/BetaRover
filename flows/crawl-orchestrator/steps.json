@@ -4,27 +4,27 @@
   "trigger": { "kind": "Recurrence", "frequency": "Day", "interval": 1, "at": "06:00" },
   "actions": [
     { "name": "Initialize_LogSource", "type": "InitializeVariable", "value": "BR - Flow Review - Crawl Orchestrator" },
-    { "name": "Create_Review_Run", "type": "Dataverse.CreateRow", "table": "br_reviewruns", "fields": { "br_name": "Crawl @{utcNow()}", "br_status": "Running", "br_startedon": "@{utcNow()}" } },
-    { "name": "Get_Active_Standard", "type": "Dataverse.ListRows", "table": "br_reviewstandards", "$filter": "br_isactive eq true", "$top": 1 },
-    { "name": "Get_Enabled_Rules", "type": "Dataverse.ListRows", "table": "br_reviewrules", "$filter": "_br_standardid_value eq @{...} and br_enabled eq true" },
-    { "name": "Compose_Ruleset", "type": "Compose", "note": "Shape rules into the engine Ruleset; parse br_parametersjson via json()." },
+    { "name": "Create_Review_Run", "type": "Dataverse.CreateRow", "table": "bvr_reviewruns", "fields": { "bvr_name": "Crawl @{utcNow()}", "bvr_status": "Running", "bvr_startedon": "@{utcNow()}" } },
+    { "name": "Get_Active_Standard", "type": "Dataverse.ListRows", "table": "bvr_reviewstandards", "$filter": "bvr_isactive eq true", "$top": 1 },
+    { "name": "Get_Enabled_Rules", "type": "Dataverse.ListRows", "table": "bvr_reviewrules", "$filter": "_bvr_standardid_value eq @{...} and bvr_enabled eq true" },
+    { "name": "Compose_Ruleset", "type": "Compose", "note": "Shape rules into the engine Ruleset; parse bvr_parametersjson via json()." },
     {
       "name": "Try",
       "type": "Scope",
       "runAfter": { "Compose_Ruleset": ["Succeeded"] },
       "actions": [
-        { "name": "List_Cloud_Flows", "type": "Dataverse.ListRows", "table": "workflows", "$filter": "category eq 5@{if(first(outputs('Get_Active_Standard')?['body/value'])?['br_reviewallflows'], '', ' and statecode eq 1')}", "$filterNote": "Reviews only activated flows (statecode eq 1) unless the active standard's 'Review all flows' (br_reviewallflows) is on, in which case every cloud flow is listed.", "$select": "workflowid,name,clientdata,modifiedon,statecode", "$top": 5000, "paging": "@odata.nextLink" },
+        { "name": "List_Cloud_Flows", "type": "Dataverse.ListRows", "table": "workflows", "$filter": "category eq 5@{if(first(outputs('Get_Active_Standard')?['body/value'])?['bvr_reviewallflows'], '', ' and statecode eq 1')}", "$filterNote": "Reviews only activated flows (statecode eq 1) unless the active standard's 'Review all flows' (bvr_reviewallflows) is on, in which case every cloud flow is listed.", "$select": "workflowid,name,clientdata,modifiedon,statecode", "$top": 5000, "paging": "@odata.nextLink" },
         { "name": "Enrich_From_Management_API", "type": "HTTP", "note": "Power Automate Management API for owner principal type, environment, state." },
         {
           "name": "Apply_to_each_flow",
           "type": "Foreach",
           "foreach": "@outputs('List_Cloud_Flows')?['body/value']",
           "actions": [
-            { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "br_flowinventories", "key": "br_flowid" },
-            { "name": "Skip_If_Unchanged", "type": "Condition", "note": "Compare br_definitionhash to prior run; skip engine call if identical." },
+            { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "bvr_flowinventories", "key": "bvr_flowid" },
+            { "name": "Skip_If_Unchanged", "type": "Condition", "note": "Compare bvr_definitionhash to prior run; skip engine call if identical." },
             { "name": "Review_Flow", "type": "CustomConnector.ReviewFlow", "body": { "displayName": "@item()?['name']", "clientData": "@item()?['clientdata']", "inventory": { "flowId": "@item()?['workflowid']", "ownerType": "@variables('ownerType')" }, "ruleset": "@outputs('Compose_Ruleset')", "ai": true } },
-            { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "br_flowreviews", "fields": { "br_score": "@body('Review_Flow')?['score/score']", "br_passed": "@body('Review_Flow')?['score/passed']", "br_failed": "@body('Review_Flow')?['score/failed']", "br_warnings": "@body('Review_Flow')?['score/warnings']" } },
-            { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "br_reviewfindings" } ] }
+            { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_score": "@body('Review_Flow')?['score/score']", "bvr_passed": "@body('Review_Flow')?['score/passed']", "bvr_failed": "@body('Review_Flow')?['score/failed']", "bvr_warnings": "@body('Review_Flow')?['score/warnings']" } },
+            { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
           ]
         }
       ]
@@ -35,7 +35,7 @@
       "runAfter": { "Try": ["Failed", "TimedOut", "Skipped"] },
       "actions": [
         { "name": "Log_Error", "type": "ChildFlow", "body": { "Level": "Error", "Source": "@variables('LogSource')", "EventDetail": "@string(result('Try'))" } },
-        { "name": "Mark_Run_Failed", "type": "Dataverse.UpdateRow", "table": "br_reviewruns", "fields": { "br_status": "Failed" } }
+        { "name": "Mark_Run_Failed", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "fields": { "bvr_status": "Failed" } }
       ]
     },
     {
@@ -43,7 +43,7 @@
       "type": "Scope",
       "runAfter": { "Catch": ["Succeeded", "Failed", "TimedOut", "Skipped"] },
       "actions": [
-        { "name": "Finalize_Run", "type": "Dataverse.UpdateRow", "table": "br_reviewruns", "fields": { "br_completedon": "@{utcNow()}", "br_flowsscanned": "@variables('scanned')", "br_findingscount": "@variables('findings')", "br_averagescore": "@variables('avgScore')", "br_status": "Completed" } }
+        { "name": "Finalize_Run", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "fields": { "bvr_completedon": "@{utcNow()}", "bvr_flowsscanned": "@variables('scanned')", "bvr_findingscount": "@variables('findings')", "bvr_averagescore": "@variables('avgScore')", "bvr_status": "Completed" } }
       ]
     }
   ]

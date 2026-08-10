@@ -1,7 +1,7 @@
 /**
  * Emits solution/seed/default-ruleset.json from the engine's DEFAULT_RULESET so
  * the Dataverse seed data can never drift from the code. Run: npm run emit-seed
- * (builds first). The seed shape matches the br_reviewstandard / br_reviewrule
+ * (builds first). The seed shape matches the bvr_reviewstandard / bvr_reviewrule
  * tables described in docs/data-model.md.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
@@ -15,22 +15,22 @@ mkdirSync(outDir, { recursive: true });
 
 const seed = {
   standard: {
-    br_code: DEFAULT_RULESET.standardCode,
-    br_name: DEFAULT_RULESET.standardName,
-    br_version: DEFAULT_RULESET.version,
-    br_standardtext: DEFAULT_RULESET.standardText,
+    bvr_code: DEFAULT_RULESET.standardCode,
+    bvr_name: DEFAULT_RULESET.standardName,
+    bvr_version: DEFAULT_RULESET.version,
+    bvr_standardtext: DEFAULT_RULESET.standardText,
   },
   rules: DEFAULT_RULESET.rules.map((r) => ({
-    br_code: r.code,
-    br_name: r.name,
-    br_category: r.category,
-    br_evaluator: r.evaluator,
-    br_severity: r.severity,
-    br_enabled: r.enabled,
-    br_weight: r.weight,
-    br_parametersjson: JSON.stringify(r.parameters),
-    br_remediation: r.remediation ?? '',
-    br_description: r.description ?? '',
+    bvr_code: r.code,
+    bvr_name: r.name,
+    bvr_category: r.category,
+    bvr_evaluator: r.evaluator,
+    bvr_severity: r.severity,
+    bvr_enabled: r.enabled,
+    bvr_weight: r.weight,
+    bvr_parametersjson: JSON.stringify(r.parameters),
+    bvr_remediation: r.remediation ?? '',
+    bvr_description: r.description ?? '',
   })),
 };
 

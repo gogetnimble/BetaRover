@@ -67,9 +67,9 @@ The solution ships in two pieces (full detail in
    node provision.mjs --seed
    ```
 
-`br_reviewrun` includes `br_triggersource` (`schedule`/`ondemand`) and
-`br_targetflowid`, which power the on-demand **Run review now** button. Use your
-own publisher prefix if not `br_` (and mirror it into the web resource's
+`bvr_reviewrun` includes `bvr_triggersource` (`schedule`/`ondemand`) and
+`bvr_targetflowid`, which power the on-demand **Run review now** button. Use your
+own publisher prefix if not `bvr_` (and mirror it into the web resource's
 `CONFIG.entities`).
 
 ## 3. Seed the standard + rules
@@ -122,8 +122,8 @@ on-demand README).
   enabling the schedule.
 - **`BR - Flow Review - On-Demand`** (single flow) —
   [`flows/on-demand-review`](../flows/on-demand-review/README.md). **Dataverse
-  "When a row is added"** on `br_reviewruns`, filtered to
-  `br_triggersource eq <ondemand value>`. Fires when the web resource's **Run
+  "When a row is added"** on `bvr_reviewruns`, filtered to
+  `bvr_triggersource eq <ondemand value>`. Fires when the web resource's **Run
   review now** button creates a queued run.
 
 Both follow Try/Catch/Finally, logging, and bounded queries — the very standard
@@ -137,8 +137,8 @@ the resource reads on load and routes to (dashboard, the four grids, standards,
 rules, schedule). Full walkthrough + the exact site map:
 [`solution/app/README.md`](../solution/app/README.md).
 
-1. Add web resource **`br_flowreview_app`** (type *Webpage (HTML)*) from
-   [`webresource/br_flowreview_app.html`](../webresource/br_flowreview_app.html).
+1. Add web resource **`bvr_flowreview_app`** (type *Webpage (HTML)*) from
+   [`webresource/bvr_flowreview_app.html`](../webresource/bvr_flowreview_app.html).
    Its `CHOICES` block already matches the values the provisioning script assigns
    (step 2); you only touch `CONFIG` for a different publisher prefix or lookup
    navigation names — see [`webresource/README.md`](../webresource/README.md).
@@ -147,7 +147,7 @@ rules, schedule). Full walkthrough + the exact site map:
    API calls to resolve).
 3. Build the **site map** from [`solution/app/sitemap.xml`](../solution/app/sitemap.xml):
    two groups (Review, Configuration) with eight Web Resource subareas, each
-   **URL = `/WebResources/br_flowreview_app.html?data=<section>`**.
+   **URL = `/WebResources/bvr_flowreview_app.html?data=<section>`**.
 4. **Save & Publish.**
 
 Clicking a flow in any grid opens its Flow Review; clicking a run opens that
@@ -159,14 +159,14 @@ Two distinct roles:
 
 **Crawl application user** (the flows run as this) — least privilege, mirroring
 the standard's own security rule:
-- Read on `workflows`, `br_reviewstandard`, `br_reviewrule`.
-- Create/Write on `br_flowinventory`, `br_reviewrun`, `br_flowreview`,
-  `br_reviewfinding`.
+- Read on `workflows`, `bvr_reviewstandard`, `bvr_reviewrule`.
+- Create/Write on `bvr_flowinventory`, `bvr_reviewrun`, `bvr_flowreview`,
+  `bvr_reviewfinding`.
 - **No** System Administrator.
 
-**Flow Review User** (people using the app) — Read on all six `br_*` tables;
-plus Create on `br_reviewrule` (to use **New rule**), Create on `br_reviewrun`
-(to use **Run review now**), and Write on `br_reviewstandard` (to use the
+**Flow Review User** (people using the app) — Read on all six `bvr_*` tables;
+plus Create on `bvr_reviewrule` (to use **New rule**), Create on `bvr_reviewrun`
+(to use **Run review now**), and Write on `bvr_reviewstandard` (to use the
 **Active** and **Review all flows** toggles). The web resource acts as the
 signed-in user.
 
@@ -179,7 +179,7 @@ signed-in user.
   [`engine/test/fixtures/`](../engine/test/fixtures).
 - Click **Run review now**; a new on-demand run should complete within seconds
   and the review should refresh.
-- Add a rule via **New rule**; confirm a `br_reviewrule` row appears and the next
+- Add a rule via **New rule**; confirm a `bvr_reviewrule` row appears and the next
   crawl evaluates it. (A choice error here means the `CHOICES` map is wrong —
   step 7.2.)
 
@@ -187,8 +187,8 @@ signed-in user.
 
 - **Schedule:** the Crawl Orchestrator recurrence (default daily 06:00) is the
   nightly review. Adjust in the trigger.
-- **Retention:** add `br_reviewrun` (and its cascade) to a nightly purge after a
+- **Retention:** add `bvr_reviewrun` (and its cascade) to a nightly purge after a
   window (e.g. 6 months); keep the latest run for trend baselines. See
   [`data-model.md`](data-model.md#retention).
-- **Cost control:** the crawl skips flows whose `br_definitionhash` is unchanged,
+- **Cost control:** the crawl skips flows whose `bvr_definitionhash` is unchanged,
   so unchanged flows don't re-hit the engine or Azure OpenAI.

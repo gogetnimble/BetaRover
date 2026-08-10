@@ -12,10 +12,10 @@
   <WebResources>
     <WebResource>
       <WebResourceId>{b1f0a2c4-5d6e-47a8-9b10-3c2d1e0f4a5b}</WebResourceId>
-      <Name>br_flowreview_app.html</Name>
+      <Name>bvr_flowreview_app.html</Name>
       <DisplayName>Ember</DisplayName>
       <Description>Dashboard, per-flow review, and add-a-rule UI for the Ember app.</Description>
-      <FileName>/WebResources/br_flowreview_app.html</FileName>
+      <FileName>/WebResources/bvr_flowreview_app.html</FileName>
       <WebResourceType>1</WebResourceType>
       <IsCustomizable>1</IsCustomizable>
       <CanBeDeleted>1</CanBeDeleted>

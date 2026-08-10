@@ -13,14 +13,14 @@
     <Publisher>
       <UniqueName>betarover</UniqueName>
       <LocalizedNames>
-        <LocalizedName description="BetaRover" languagecode="1033" />
+        <LocalizedName description="Beta Rover Inc" languagecode="1033" />
       </LocalizedNames>
       <Descriptions>
-        <Description description="BetaRover Inc." languagecode="1033" />
+        <Description description="Beta Rover Inc" languagecode="1033" />
       </Descriptions>
       <EMailAddress xsi:nil="true"></EMailAddress>
       <SupportingWebsiteUrl xsi:nil="true"></SupportingWebsiteUrl>
-      <CustomizationPrefix>br</CustomizationPrefix>
+      <CustomizationPrefix>bvr</CustomizationPrefix>
       <CustomizationOptionValuePrefix>10000</CustomizationOptionValuePrefix>
       <Addresses>
         <Address>
@@ -82,7 +82,7 @@
       </Addresses>
     </Publisher>
     <RootComponents>
-      <RootComponent type="61" schemaName="br_flowreview_app.html" behavior="0" />
+      <RootComponent type="61" schemaName="bvr_flowreview_app.html" behavior="0" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

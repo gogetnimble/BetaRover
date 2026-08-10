@@ -2,7 +2,7 @@
 <!--
   Ember model-driven app — site map.
 
-  Every menu item opens the SAME web resource (br_flowreview_app.html) with a
+  Every menu item opens the SAME web resource (bvr_flowreview_app.html) with a
   different ?data= value. The web resource reads it on load (init → PAGE_MAP)
   and shows that section, so the native left-nav drives the whole Ember UI:
 
@@ -24,24 +24,24 @@
     <Titles><Title LCID="1033" Title="Ember" /></Titles>
     <Group Id="review_group">
       <Titles><Title LCID="1033" Title="Review" /></Titles>
-      <SubArea Id="sa_dashboard" Url="/WebResources/br_flowreview_app.html?data=dash">
+      <SubArea Id="sa_dashboard" Url="/WebResources/bvr_flowreview_app.html?data=dash">
         <Titles><Title LCID="1033" Title="Dashboard" /></Titles></SubArea>
-      <SubArea Id="sa_flowinventory" Url="/WebResources/br_flowreview_app.html?data=flowinventory">
+      <SubArea Id="sa_flowinventory" Url="/WebResources/bvr_flowreview_app.html?data=flowinventory">
         <Titles><Title LCID="1033" Title="Flow Inventory" /></Titles></SubArea>
-      <SubArea Id="sa_reviewruns" Url="/WebResources/br_flowreview_app.html?data=reviewruns">
+      <SubArea Id="sa_reviewruns" Url="/WebResources/bvr_flowreview_app.html?data=reviewruns">
         <Titles><Title LCID="1033" Title="Review Runs" /></Titles></SubArea>
-      <SubArea Id="sa_flowreviews" Url="/WebResources/br_flowreview_app.html?data=flowreviews">
+      <SubArea Id="sa_flowreviews" Url="/WebResources/bvr_flowreview_app.html?data=flowreviews">
         <Titles><Title LCID="1033" Title="Flow Reviews" /></Titles></SubArea>
-      <SubArea Id="sa_findings" Url="/WebResources/br_flowreview_app.html?data=findings">
+      <SubArea Id="sa_findings" Url="/WebResources/bvr_flowreview_app.html?data=findings">
         <Titles><Title LCID="1033" Title="Findings" /></Titles></SubArea>
     </Group>
     <Group Id="config_group">
       <Titles><Title LCID="1033" Title="Configuration" /></Titles>
-      <SubArea Id="sa_standards" Url="/WebResources/br_flowreview_app.html?data=standards">
+      <SubArea Id="sa_standards" Url="/WebResources/bvr_flowreview_app.html?data=standards">
         <Titles><Title LCID="1033" Title="Review Standards" /></Titles></SubArea>
-      <SubArea Id="sa_rules" Url="/WebResources/br_flowreview_app.html?data=rules">
+      <SubArea Id="sa_rules" Url="/WebResources/bvr_flowreview_app.html?data=rules">
         <Titles><Title LCID="1033" Title="Review Rules" /></Titles></SubArea>
-      <SubArea Id="sa_schedule" Url="/WebResources/br_flowreview_app.html?data=schedule">
+      <SubArea Id="sa_schedule" Url="/WebResources/bvr_flowreview_app.html?data=schedule">
         <Titles><Title LCID="1033" Title="Crawl Schedule" /></Titles></SubArea>
     </Group>
   </Area>

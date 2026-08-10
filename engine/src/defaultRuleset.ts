@@ -2,7 +2,7 @@
  * The bundled default ruleset. It encodes the sample CMA delivery standard as
  * configurable {@link ReviewRule} records. Every tenant-specific value (the
  * `"CMA"` prefix, the approved sender, the logger names) lives in `parameters`
- * and is meant to be overridden by the `br_reviewrule` rows an administrator
+ * and is meant to be overridden by the `bvr_reviewrule` rows an administrator
  * configures in Dataverse. This file is the single source of truth for the
  * `solution/seed/default-ruleset.json` seed data (see `scripts/emit-seed.ts`).
  */

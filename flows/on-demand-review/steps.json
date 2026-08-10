@@ -3,28 +3,28 @@
   "flowName": "BR - Flow Review - On-Demand",
   "trigger": {
     "kind": "Dataverse.WhenRowAdded",
-    "table": "br_reviewruns",
+    "table": "bvr_reviewruns",
     "scope": "Organization",
-    "filterExpression": "br_triggersource eq 2",
-    "note": "Fires when the web resource's 'Run review now' button creates a br_reviewrun with Trigger Source = ondemand (option value 2 — set to your published value). The row carries br_targetflowid (the single workflowid) and, optionally, the standard lookup."
+    "filterExpression": "bvr_triggersource eq 2",
+    "note": "Fires when the web resource's 'Run review now' button creates a bvr_reviewrun with Trigger Source = ondemand (option value 2 — set to your published value). The row carries bvr_targetflowid (the single workflowid) and, optionally, the standard lookup."
   },
   "actions": [
     { "name": "Initialize_LogSource", "type": "InitializeVariable", "value": "BR - Flow Review - On-Demand" },
-    { "name": "Set_Run_Running", "type": "Dataverse.UpdateRow", "table": "br_reviewruns", "id": "@triggerOutputs()?['body/br_reviewrunid']", "fields": { "br_status": "Running", "br_startedon": "@{utcNow()}" } },
-    { "name": "Get_Active_Standard", "type": "Dataverse.ListRows", "table": "br_reviewstandards", "$filter": "br_isactive eq true", "$top": 1, "note": "If the run row supplied a standard lookup, use it instead." },
-    { "name": "Get_Enabled_Rules", "type": "Dataverse.ListRows", "table": "br_reviewrules", "$filter": "_br_standardid_value eq @{...} and br_enabled eq true" },
-    { "name": "Compose_Ruleset", "type": "Compose", "note": "Shape rules into the engine Ruleset; parse br_parametersjson via json()." },
+    { "name": "Set_Run_Running", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "id": "@triggerOutputs()?['body/bvr_reviewrunid']", "fields": { "bvr_status": "Running", "bvr_startedon": "@{utcNow()}" } },
+    { "name": "Get_Active_Standard", "type": "Dataverse.ListRows", "table": "bvr_reviewstandards", "$filter": "bvr_isactive eq true", "$top": 1, "note": "If the run row supplied a standard lookup, use it instead." },
+    { "name": "Get_Enabled_Rules", "type": "Dataverse.ListRows", "table": "bvr_reviewrules", "$filter": "_bvr_standardid_value eq @{...} and bvr_enabled eq true" },
+    { "name": "Compose_Ruleset", "type": "Compose", "note": "Shape rules into the engine Ruleset; parse bvr_parametersjson via json()." },
     {
       "name": "Try",
       "type": "Scope",
       "runAfter": { "Compose_Ruleset": ["Succeeded"] },
       "actions": [
-        { "name": "Get_Target_Flow", "type": "Dataverse.GetRow", "table": "workflows", "id": "@triggerOutputs()?['body/br_targetflowid']", "$select": "workflowid,name,clientdata,modifiedon", "note": "Single flow — no paging. category is implicitly 5 for the targeted cloud flow." },
+        { "name": "Get_Target_Flow", "type": "Dataverse.GetRow", "table": "workflows", "id": "@triggerOutputs()?['body/bvr_targetflowid']", "$select": "workflowid,name,clientdata,modifiedon", "note": "Single flow — no paging. category is implicitly 5 for the targeted cloud flow." },
         { "name": "Enrich_From_Management_API", "type": "HTTP", "note": "Power Automate Management API for owner principal type, environment, state." },
-        { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "br_flowinventories", "key": "br_flowid" },
+        { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "bvr_flowinventories", "key": "bvr_flowid" },
         { "name": "Review_Flow", "type": "CustomConnector.ReviewFlow", "body": { "displayName": "@body('Get_Target_Flow')?['name']", "clientData": "@body('Get_Target_Flow')?['clientdata']", "inventory": { "flowId": "@body('Get_Target_Flow')?['workflowid']", "ownerType": "@variables('ownerType')" }, "ruleset": "@outputs('Compose_Ruleset')", "ai": true } },
-        { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "br_flowreviews", "fields": { "br_runid": "@triggerOutputs()?['body/br_reviewrunid']", "br_score": "@body('Review_Flow')?['score/score']", "br_passed": "@body('Review_Flow')?['score/passed']", "br_failed": "@body('Review_Flow')?['score/failed']", "br_warnings": "@body('Review_Flow')?['score/warnings']" } },
-        { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "br_reviewfindings" } ] }
+        { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_runid": "@triggerOutputs()?['body/bvr_reviewrunid']", "bvr_score": "@body('Review_Flow')?['score/score']", "bvr_passed": "@body('Review_Flow')?['score/passed']", "bvr_failed": "@body('Review_Flow')?['score/failed']", "bvr_warnings": "@body('Review_Flow')?['score/warnings']" } },
+        { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
       ]
     },
     {
@@ -33,7 +33,7 @@
       "runAfter": { "Try": ["Failed", "TimedOut", "Skipped"] },
       "actions": [
         { "name": "Log_Error", "type": "ChildFlow", "body": { "Level": "Error", "Source": "@variables('LogSource')", "EventDetail": "@string(result('Try'))" } },
-        { "name": "Mark_Run_Failed", "type": "Dataverse.UpdateRow", "table": "br_reviewruns", "id": "@triggerOutputs()?['body/br_reviewrunid']", "fields": { "br_status": "Failed", "br_completedon": "@{utcNow()}" } }
+        { "name": "Mark_Run_Failed", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "id": "@triggerOutputs()?['body/bvr_reviewrunid']", "fields": { "bvr_status": "Failed", "bvr_completedon": "@{utcNow()}" } }
       ]
     },
     {
@@ -41,7 +41,7 @@
       "type": "Scope",
       "runAfter": { "Catch": ["Succeeded", "Failed", "TimedOut", "Skipped"] },
       "actions": [
-        { "name": "Finalize_Run", "type": "Dataverse.UpdateRow", "table": "br_reviewruns", "id": "@triggerOutputs()?['body/br_reviewrunid']", "fields": { "br_completedon": "@{utcNow()}", "br_flowsscanned": 1, "br_findingscount": "@length(body('Review_Flow')?['findings'])", "br_averagescore": "@body('Review_Flow')?['score/score']", "br_status": "Completed" } }
+        { "name": "Finalize_Run", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "id": "@triggerOutputs()?['body/bvr_reviewrunid']", "fields": { "bvr_completedon": "@{utcNow()}", "bvr_flowsscanned": 1, "bvr_findingscount": "@length(body('Review_Flow')?['findings'])", "bvr_averagescore": "@body('Review_Flow')?['score/score']", "bvr_status": "Completed" } }
       ]
     }
   ]

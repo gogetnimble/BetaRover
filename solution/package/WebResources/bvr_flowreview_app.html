@@ -1,5 +1,5 @@
 <!--
-  Ember — Power Automate code review — HTML web resource (br_flowreview_app.html)
+  Ember — Power Automate code review — HTML web resource (bvr_flowreview_app.html)
   ---------------------------------------------------------------------------
   A single self-contained web resource for the Ember model-driven
   app. Three tabs: Tenant Dashboard, Flow Review (per-flow findings), and
@@ -7,7 +7,7 @@
 
   DATA SOURCE
     - When hosted inside a model-driven app it uses Xrm.WebApi to read/write the
-      six br_* tables. No external libraries, no CDN — CSP-safe.
+      six bvr_* tables. No external libraries, no CDN — CSP-safe.
     - When opened standalone (no Xrm) it renders bundled SAMPLE data so it can be
       previewed and design-reviewed outside Dataverse. A pill in the header shows
       which mode is active ("Live" vs "Preview").
@@ -374,7 +374,7 @@
     <div class="card pad" style="margin-bottom:14px">
       <div class="std-head">
         <div class="txt">
-          <div class="eyebrow" style="margin-bottom:6px">Review Standard · br_reviewstandard</div>
+          <div class="eyebrow" style="margin-bottom:6px">Review Standard · bvr_reviewstandard</div>
           <h2 id="stdName">—</h2>
           <div class="fr-metaline" style="margin-top:8px" id="stdMeta"></div>
           <div class="std-text" id="stdText"></div>
@@ -396,7 +396,7 @@
       <span>Every value below — the naming prefix, the approved sender, scope names, the <span class="mono">$top</span> parameter — lives in the rule's <b>Parameters</b> column. Change a threshold here and the next crawl uses it: <b>no code change, no redeploy.</b> Severity and weight drive the 0–100 score.</span>
     </div>
     <div class="card">
-      <div class="card-h"><h3>Review Rules · br_reviewrule</h3>
+      <div class="card-h"><h3>Review Rules · bvr_reviewrule</h3>
         <button class="btn primary" id="addRuleBtn"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12"/></svg>New rule</button>
       </div>
       <div style="overflow-x:auto"><table class="rules">
@@ -415,11 +415,11 @@
   <section class="view" id="view-schedule"><div class="grid-shell" id="grid-schedule"></div></section>
 </div>
 
-<!-- ===== ADD-RULE MODAL (Quick Create for br_reviewrule) ===== -->
+<!-- ===== ADD-RULE MODAL (Quick Create for bvr_reviewrule) ===== -->
 <div class="modal-backdrop" id="ruleModal" hidden>
   <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="rmTitle">
     <div class="modal-h">
-      <div><div class="eyebrow" style="margin-bottom:4px">Quick create · br_reviewrule</div><h3 id="rmTitle">Add review rule</h3></div>
+      <div><div class="eyebrow" style="margin-bottom:4px">Quick create · bvr_reviewrule</div><h3 id="rmTitle">Add review rule</h3></div>
       <button class="iconbtn" id="rmClose" aria-label="Close">✕</button>
     </div>
     <div class="modal-body">
@@ -434,7 +434,7 @@
         </div>
       </div>
       <div class="form-grid">
-        <div class="field"><label>Evaluator <span class="hint">br_evaluator</span></label>
+        <div class="field"><label>Evaluator <span class="hint">bvr_evaluator</span></label>
           <select class="select" id="f-eval">
             <option value="namingConvention">namingConvention</option>
             <option value="errorHandlingScopes">errorHandlingScopes</option>
@@ -457,7 +457,7 @@
         <div class="field"><label>Enabled</label><button class="toggle" id="f-enabled" type="button" aria-label="enabled"></button></div>
       </div>
       <div class="field full"><label>Description</label><textarea class="ta" id="f-desc" placeholder="What this rule checks and why it matters."></textarea></div>
-      <div class="field full"><label>Parameters <span class="hint">br_parametersjson — tenant config, no redeploy</span></label>
+      <div class="field full"><label>Parameters <span class="hint">bvr_parametersjson — tenant config, no redeploy</span></label>
         <textarea class="ta mono" id="f-params" spellcheck="false">{}</textarea>
         <span class="err-msg" id="f-params-err">Parameters must be valid JSON.</span>
       </div>
@@ -479,12 +479,12 @@
 const CONFIG = {
   complianceThreshold: 70,           // score >= this counts as "compliant"
   entities: {                        // logical names (singular) → Web API set names (plural)
-    standard:'br_reviewstandard', rule:'br_reviewrule', inventory:'br_flowinventory',
-    run:'br_reviewrun', flowreview:'br_flowreview', finding:'br_reviewfinding'
+    standard:'bvr_reviewstandard', rule:'bvr_reviewrule', inventory:'bvr_flowinventory',
+    run:'bvr_reviewrun', flowreview:'bvr_flowreview', finding:'bvr_reviewfinding'
   },
   navProps: {                        // navigation property names for $expand / @odata.bind
-    reviewToInventory:'br_flowinventoryid',   // single-valued (flowreview → inventory)
-    ruleToStandard:'br_standardid'            // single-valued (rule → standard)
+    reviewToInventory:'bvr_flowinventoryid',   // single-valued (flowreview → inventory)
+    ruleToStandard:'bvr_standardid'            // single-valued (rule → standard)
   },
   poll: { intervalMs:4000, timeoutMs:180000 } // on-demand run polling
 };
@@ -520,34 +520,34 @@ const Live = {
   },
   async activeStandard(){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,
-      "?$select=br_name,br_code,br_version,br_standardtext,br_isactive,br_reviewallflows&$filter=br_isactive eq true&$top=1");
+      "?$select=bvr_name,bvr_code,bvr_version,bvr_standardtext,bvr_isactive,bvr_reviewallflows&$filter=bvr_isactive eq true&$top=1");
     const s = r.entities[0];
     if(!s) return null;
-    return { id:s.br_reviewstandardid, name:s.br_name, code:s.br_code, version:s.br_version, text:s.br_standardtext||'', active:!!s.br_isactive, reviewAllFlows:!!s.br_reviewallflows };
+    return { id:s.bvr_reviewstandardid, name:s.bvr_name, code:s.bvr_code, version:s.bvr_version, text:s.bvr_standardtext||'', active:!!s.bvr_isactive, reviewAllFlows:!!s.bvr_reviewallflows };
   },
   async updateStandard(id, patch){ await XRM.WebApi.updateRecord(CONFIG.entities.standard, id, patch); },
   async recentRuns(){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,
-      "?$select=br_name,br_completedon,br_flowsscanned,br_findingscount,br_averagescore&$filter=br_completedon ne null&$orderby=br_completedon desc&$top=2");
-    return r.entities.map(e=>({ id:e.br_reviewrunid, name:e.br_name, completedOn:e.br_completedon,
-      flowsScanned:e.br_flowsscanned||0, findingsCount:e.br_findingscount||0, avgScore:Math.round(e.br_averagescore||0) }));
+      "?$select=bvr_name,bvr_completedon,bvr_flowsscanned,bvr_findingscount,bvr_averagescore&$filter=bvr_completedon ne null&$orderby=bvr_completedon desc&$top=2");
+    return r.entities.map(e=>({ id:e.bvr_reviewrunid, name:e.bvr_name, completedOn:e.bvr_completedon,
+      flowsScanned:e.bvr_flowsscanned||0, findingsCount:e.bvr_findingscount||0, avgScore:Math.round(e.bvr_averagescore||0) }));
   },
   async flowReviews(runId){
     const nav = CONFIG.navProps.reviewToInventory;
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.flowreview,
-      `?$select=br_name,br_score,br_passed,br_failed,br_warnings&$filter=_br_runid_value eq ${runId}`+
-      `&$expand=${nav}($select=br_name,br_environment,br_ownername,br_ownertype)&$orderby=br_score asc&$top=5000`);
+      `?$select=bvr_name,bvr_score,bvr_passed,bvr_failed,bvr_warnings&$filter=_bvr_runid_value eq ${runId}`+
+      `&$expand=${nav}($select=bvr_name,bvr_environment,bvr_ownername,bvr_ownertype)&$orderby=bvr_score asc&$top=5000`);
     return r.entities.map(e=>{ const inv=e[nav]||{};
-      return { id:e.br_flowreviewid, name:(inv.br_name||e.br_name), environment:inv.br_environment||'',
-        owner:inv.br_ownername||'', ownerType:fmt(inv,'br_ownertype')||'',
-        score:e.br_score||0, passed:e.br_passed||0, warnings:e.br_warnings||0, failed:e.br_failed||0 }; });
+      return { id:e.bvr_flowreviewid, name:(inv.bvr_name||e.bvr_name), environment:inv.bvr_environment||'',
+        owner:inv.bvr_ownername||'', ownerType:fmt(inv,'bvr_ownertype')||'',
+        score:e.bvr_score||0, passed:e.bvr_passed||0, warnings:e.bvr_warnings||0, failed:e.bvr_failed||0 }; });
   },
   async severity(runId){
-    const fx = `<fetch aggregate='true'><entity name='br_reviewfinding'>`+
-      `<attribute name='br_reviewfindingid' alias='cnt' aggregate='count'/>`+
-      `<attribute name='br_severity' alias='sev' groupby='true'/>`+
-      `<link-entity name='br_flowreview' from='br_flowreviewid' to='br_flowreviewid'>`+
-      `<filter><condition attribute='br_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
+    const fx = `<fetch aggregate='true'><entity name='bvr_reviewfinding'>`+
+      `<attribute name='bvr_reviewfindingid' alias='cnt' aggregate='count'/>`+
+      `<attribute name='bvr_severity' alias='sev' groupby='true'/>`+
+      `<link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid'>`+
+      `<filter><condition attribute='bvr_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding, "?fetchXml="+encodeURIComponent(fx));
     const out = { error:0, warning:0, info:0 };
     r.entities.forEach(e=>{ const label=String(fmt(e,'sev')||'').toLowerCase(); const n=e.cnt||0;
@@ -555,12 +555,12 @@ const Live = {
     return out;
   },
   async ruleCompliance(runId){
-    const fx = `<fetch aggregate='true'><entity name='br_reviewfinding'>`+
-      `<attribute name='br_reviewfindingid' alias='cnt' aggregate='count'/>`+
-      `<attribute name='br_rulecode' alias='code' groupby='true'/>`+
-      `<attribute name='br_status' alias='status' groupby='true'/>`+
-      `<link-entity name='br_flowreview' from='br_flowreviewid' to='br_flowreviewid'>`+
-      `<filter><condition attribute='br_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
+    const fx = `<fetch aggregate='true'><entity name='bvr_reviewfinding'>`+
+      `<attribute name='bvr_reviewfindingid' alias='cnt' aggregate='count'/>`+
+      `<attribute name='bvr_rulecode' alias='code' groupby='true'/>`+
+      `<attribute name='bvr_status' alias='status' groupby='true'/>`+
+      `<link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid'>`+
+      `<filter><condition attribute='bvr_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding, "?fetchXml="+encodeURIComponent(fx));
     const agg = {};
     r.entities.forEach(e=>{ const code=e.code; if(!code) return; const st=String(fmt(e,'status')||'').toLowerCase(); const n=e.cnt||0;
@@ -572,54 +572,54 @@ const Live = {
   async detail(flowReviewId){
     const nav = CONFIG.navProps.reviewToInventory;
     const fr = await XRM.WebApi.retrieveRecord(CONFIG.entities.flowreview, flowReviewId,
-      `?$select=br_name,br_score,br_passed,br_failed,br_warnings&$expand=${nav}($select=br_name,br_environment,br_ownername,br_ownertype,br_triggertype,br_actioncount,br_lastmodifiedon_src,br_definitionhash,br_flowid)`);
+      `?$select=bvr_name,bvr_score,bvr_passed,bvr_failed,bvr_warnings&$expand=${nav}($select=bvr_name,bvr_environment,bvr_ownername,bvr_ownertype,bvr_triggertype,bvr_actioncount,bvr_lastmodifiedon_src,bvr_definitionhash,bvr_flowid)`);
     const inv = fr[nav]||{};
     const fr2 = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding,
-      `?$select=br_rulecode,br_ruleid,br_status,br_severity,br_message,br_evidence,br_remediation,br_aigenerated&$filter=_br_flowreviewid_value eq ${flowReviewId}&$orderby=br_severity desc`);
-    const all = fr2.entities.map(e=>({ code:e.br_rulecode, name:(e['_br_ruleid_value@OData.Community.Display.V1.FormattedValue']||e.br_rulecode), status:String(fmt(e,'br_status')||'').toLowerCase(),
-      severity:String(fmt(e,'br_severity')||'info').toLowerCase(), message:e.br_message||'', evidence:e.br_evidence||'',
-      remediation:e.br_remediation||'', ai:!!e.br_aigenerated }));
+      `?$select=bvr_rulecode,bvr_ruleid,bvr_status,bvr_severity,bvr_message,bvr_evidence,bvr_remediation,bvr_aigenerated&$filter=_bvr_flowreviewid_value eq ${flowReviewId}&$orderby=bvr_severity desc`);
+    const all = fr2.entities.map(e=>({ code:e.bvr_rulecode, name:(e['_bvr_ruleid_value@OData.Community.Display.V1.FormattedValue']||e.bvr_rulecode), status:String(fmt(e,'bvr_status')||'').toLowerCase(),
+      severity:String(fmt(e,'bvr_severity')||'info').toLowerCase(), message:e.bvr_message||'', evidence:e.bvr_evidence||'',
+      remediation:e.bvr_remediation||'', ai:!!e.bvr_aigenerated }));
     return {
-      flowReviewId, name:inv.br_name||fr.br_name, environment:inv.br_environment||'', owner:inv.br_ownername||'',
-      ownerType:fmt(inv,'br_ownertype')||'', triggerType:inv.br_triggertype||'—', actionCount:inv.br_actioncount||0,
-      modifiedOn:inv.br_lastmodifiedon_src, hash:inv.br_definitionhash||'', flowId:inv.br_flowid||'',
-      score:fr.br_score||0, passed:fr.br_passed||0, warnings:fr.br_warnings||0, failed:fr.br_failed||0,
+      flowReviewId, name:inv.bvr_name||fr.bvr_name, environment:inv.bvr_environment||'', owner:inv.bvr_ownername||'',
+      ownerType:fmt(inv,'bvr_ownertype')||'', triggerType:inv.bvr_triggertype||'—', actionCount:inv.bvr_actioncount||0,
+      modifiedOn:inv.bvr_lastmodifiedon_src, hash:inv.bvr_definitionhash||'', flowId:inv.bvr_flowid||'',
+      score:fr.bvr_score||0, passed:fr.bvr_passed||0, warnings:fr.bvr_warnings||0, failed:fr.bvr_failed||0,
       na: all.filter(f=>f.status==='not_applicable').length,
       findings: all.filter(f=>!f.ai), ai: all.filter(f=>f.ai)
     };
   },
   async rules(standardId){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.rule,
-      `?$select=br_name,br_code,br_category,br_evaluator,br_severity,br_enabled,br_weight,br_parametersjson,br_description&$filter=_br_standardid_value eq ${standardId}&$orderby=br_weight desc`);
-    return r.entities.map(e=>({ id:e.br_reviewruleid, code:e.br_code, name:e.br_name, cat:fmt(e,'br_category')||'',
-      sev:String(fmt(e,'br_severity')||'info').toLowerCase(), w:e.br_weight||1, p:e.br_parametersjson||'{}',
-      desc:e.br_description||'', on:!!e.br_enabled }));
+      `?$select=bvr_name,bvr_code,bvr_category,bvr_evaluator,bvr_severity,bvr_enabled,bvr_weight,bvr_parametersjson,bvr_description&$filter=_bvr_standardid_value eq ${standardId}&$orderby=bvr_weight desc`);
+    return r.entities.map(e=>({ id:e.bvr_reviewruleid, code:e.bvr_code, name:e.bvr_name, cat:fmt(e,'bvr_category')||'',
+      sev:String(fmt(e,'bvr_severity')||'info').toLowerCase(), w:e.bvr_weight||1, p:e.bvr_parametersjson||'{}',
+      desc:e.bvr_description||'', on:!!e.bvr_enabled }));
   },
   async createRule(standardId, r){
-    const rec = { br_name:r.name, br_code:r.code, br_evaluator:r.eval, br_weight:r.w,
-      br_enabled:r.on, br_parametersjson:r.p, br_description:r.desc, br_remediation:r.rem,
-      br_category:CHOICES.category[r.cat], br_severity:CHOICES.severity[r.sev] };
+    const rec = { bvr_name:r.name, bvr_code:r.code, bvr_evaluator:r.eval, bvr_weight:r.w,
+      bvr_enabled:r.on, bvr_parametersjson:r.p, bvr_description:r.desc, bvr_remediation:r.rem,
+      bvr_category:CHOICES.category[r.cat], bvr_severity:CHOICES.severity[r.sev] };
     rec[`${CONFIG.navProps.ruleToStandard}@odata.bind`] = `/${CONFIG.entities.standard}s(${standardId})`;
     const res = await XRM.WebApi.createRecord(CONFIG.entities.rule, rec);
     return res.id;
   },
-  async setRuleEnabled(id, on){ await XRM.WebApi.updateRecord(CONFIG.entities.rule, id, { br_enabled:on }); },
+  async setRuleEnabled(id, on){ await XRM.WebApi.updateRecord(CONFIG.entities.rule, id, { bvr_enabled:on }); },
   async queueOnDemand(standardId, flowId, flowName, user){
-    const rec = { br_name:`On-demand · ${flowName} · ${new Date().toISOString()}`,
-      br_status:CHOICES.runStatus.Queued, br_triggersource:CHOICES.triggerSrc.ondemand,
-      br_targetflowid:flowId, br_triggeredby:user||'' };
+    const rec = { bvr_name:`On-demand · ${flowName} · ${new Date().toISOString()}`,
+      bvr_status:CHOICES.runStatus.Queued, bvr_triggersource:CHOICES.triggerSrc.ondemand,
+      bvr_targetflowid:flowId, bvr_triggeredby:user||'' };
     if(standardId) rec[`${CONFIG.navProps.ruleToStandard}@odata.bind`] = `/${CONFIG.entities.standard}s(${standardId})`;
     const res = await XRM.WebApi.createRecord(CONFIG.entities.run, rec);
     return res.id;
   },
   async runOutcome(runId){
-    const r = await XRM.WebApi.retrieveRecord(CONFIG.entities.run, runId, "?$select=br_status,br_completedon");
-    return { status:String(fmt(r,'br_status')||'').toLowerCase(), done:!!r.br_completedon };
+    const r = await XRM.WebApi.retrieveRecord(CONFIG.entities.run, runId, "?$select=bvr_status,bvr_completedon");
+    return { status:String(fmt(r,'bvr_status')||'').toLowerCase(), done:!!r.bvr_completedon };
   },
   async latestReviewForFlow(flowId){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.flowreview,
-      `?$select=br_flowreviewid&$filter=${CONFIG.navProps.reviewToInventory}/br_flowid eq '${flowId}'&$orderby=createdon desc&$top=1`);
-    return r.entities[0] && r.entities[0].br_flowreviewid;
+      `?$select=bvr_flowreviewid&$filter=${CONFIG.navProps.reviewToInventory}/bvr_flowid eq '${flowId}'&$orderby=createdon desc&$top=1`);
+    return r.entities[0] && r.entities[0].bvr_flowreviewid;
   }
 };
 
@@ -667,7 +667,7 @@ const Demo = {
   _rules: DEMO_RULES.slice(),
   async meta(){ return { live:false, env:'CMA — Production (sample)', user:'Preview' }; },
   async activeStandard(){ return {...DEMO_STD}; },
-  async updateStandard(_id, patch){ if('br_reviewallflows' in patch) DEMO_STD.reviewAllFlows=patch.br_reviewallflows; if('br_isactive' in patch) DEMO_STD.active=patch.br_isactive; },
+  async updateStandard(_id, patch){ if('bvr_reviewallflows' in patch) DEMO_STD.reviewAllFlows=patch.bvr_reviewallflows; if('bvr_isactive' in patch) DEMO_STD.active=patch.bvr_isactive; },
   async recentRuns(){ return [
     { id:'run1', name:'Crawl', completedOn:'2026-08-04T02:00:00Z', flowsScanned:312, findingsCount:1204, avgScore:74 },
     { id:'run0', name:'Crawl', completedOn:'2026-08-03T02:00:00Z', flowsScanned:311, findingsCount:1347, avgScore:68 } ]; },
@@ -878,8 +878,8 @@ async function runReviewNow(btn){
 let STD_LOADED=false, ACTIVE_STD=null, RULES=[], STD_TOGGLES_WIRED=false;
 function wireStdToggles(){
   if(STD_TOGGLES_WIRED) return; STD_TOGGLES_WIRED=true;
-  document.getElementById('stdActive').addEventListener('click', ()=>saveStdFlag('br_isactive','active','stdActive','Standard active'));
-  document.getElementById('stdAllFlows').addEventListener('click', ()=>saveStdFlag('br_reviewallflows','reviewAllFlows','stdAllFlows','Review all flows'));
+  document.getElementById('stdActive').addEventListener('click', ()=>saveStdFlag('bvr_isactive','active','stdActive','Standard active'));
+  document.getElementById('stdAllFlows').addEventListener('click', ()=>saveStdFlag('bvr_reviewallflows','reviewAllFlows','stdAllFlows','Review all flows'));
 }
 async function saveStdFlag(field, key, btnId, label){
   if(!ACTIVE_STD) return;
@@ -1024,8 +1024,8 @@ let INV_LOADED=false, RUNS_LOADED=false, FR_LOADED=false, FIND_LOADED=false, STD
 async function loadInventory(){ if(INV_LOADED) return; INV_LOADED=true;
   const host=document.getElementById('grid-flowinventory'); host.innerHTML=spinCard;
   try{ let rows;
-    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,"?$select=br_name,br_environment,br_ownername,br_ownertype,br_state,br_actioncount,br_source,br_flowid&$orderby=br_name asc&$top=500");
-      rows=r.entities.map(e=>({ name:e.br_name, env:e.br_environment||'', owner:e.br_ownername||'', otype:fmt(e,'br_ownertype')||'', state:fmt(e,'br_state')||'', actions:e.br_actioncount||0, src:fmt(e,'br_source')||'', _flow:e.br_flowid })); }
+    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,"?$select=bvr_name,bvr_environment,bvr_ownername,bvr_ownertype,bvr_state,bvr_actioncount,bvr_source,bvr_flowid&$orderby=bvr_name asc&$top=500");
+      rows=r.entities.map(e=>({ name:e.bvr_name, env:e.bvr_environment||'', owner:e.bvr_ownername||'', otype:fmt(e,'bvr_ownertype')||'', state:fmt(e,'bvr_state')||'', actions:e.bvr_actioncount||0, src:fmt(e,'bvr_source')||'', _flow:e.bvr_flowid })); }
     else rows=DEMO_INVENTORY.slice();
     dgrid('grid-flowinventory',{ title:'Flow Inventory', entity:CONFIG.entities.inventory, link:true, sub:'discovered cloud flows · click to open review',
       columns:[{key:'name',label:'Name'},{key:'env',label:'Environment'},{key:'owner',label:'Owner',render:rOwnerS},{key:'otype',label:'Owner type'},{key:'state',label:'State',render:rStateS},{key:'actions',label:'Actions'},{key:'src',label:'Source'}], rows });
@@ -1034,8 +1034,8 @@ async function loadInventory(){ if(INV_LOADED) return; INV_LOADED=true;
 async function loadRuns(){ if(RUNS_LOADED) return; RUNS_LOADED=true;
   const host=document.getElementById('grid-reviewruns'); host.innerHTML=spinCard;
   try{ let rows;
-    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,"?$select=br_name,br_status,br_triggersource,br_startedon,br_completedon,br_flowsscanned,br_findingscount,br_averagescore&$orderby=br_createdon desc&$top=100");
-      rows=r.entities.map(e=>({ name:e.br_name, status:fmt(e,'br_status')||'', trig:fmt(e,'br_triggersource')||'', started:shortDate(e.br_startedon), completed:shortDate(e.br_completedon), flows:e.br_flowsscanned||0, findings:e.br_findingscount||0, avg:Math.round(e.br_averagescore||0), _goto:'flowreviews' })); }
+    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,"?$select=bvr_name,bvr_status,bvr_triggersource,bvr_startedon,bvr_completedon,bvr_flowsscanned,bvr_findingscount,bvr_averagescore&$orderby=bvr_createdon desc&$top=100");
+      rows=r.entities.map(e=>({ name:e.bvr_name, status:fmt(e,'bvr_status')||'', trig:fmt(e,'bvr_triggersource')||'', started:shortDate(e.bvr_startedon), completed:shortDate(e.bvr_completedon), flows:e.bvr_flowsscanned||0, findings:e.bvr_findingscount||0, avg:Math.round(e.bvr_averagescore||0), _goto:'flowreviews' })); }
     else rows=DEMO_RUNS.slice();
     dgrid('grid-reviewruns',{ title:'Review Runs', entity:CONFIG.entities.run, link:true, sub:'nightly + on-demand executions · click to see flow reviews',
       columns:[{key:'name',label:'Name'},{key:'status',label:'Status',render:rChipS},{key:'trig',label:'Trigger'},{key:'started',label:'Started'},{key:'completed',label:'Completed'},{key:'flows',label:'Flows'},{key:'findings',label:'Findings'},{key:'avg',label:'Avg score'}], rows });
@@ -1056,9 +1056,9 @@ async function loadFindings(){ if(FIND_LOADED) return; FIND_LOADED=true;
   const host=document.getElementById('grid-findings'); host.innerHTML=spinCard;
   try{ let rows;
     if(LIVE){ const runs=await DS.recentRuns(); if(!runs.length){ dgrid('grid-findings',{title:'Findings',entity:CONFIG.entities.finding,rows:[],empty:'No completed run yet.'}); return; }
-      const fx=`<fetch top='300'><entity name='br_reviewfinding'><attribute name='br_rulecode'/><attribute name='br_status'/><attribute name='br_severity'/><attribute name='br_category'/><attribute name='br_aigenerated'/><order attribute='br_severity' descending='true'/><link-entity name='br_flowreview' from='br_flowreviewid' to='br_flowreviewid' alias='fr'><attribute name='br_name'/><attribute name='br_flowreviewid'/><filter><condition attribute='br_runid' operator='eq' value='${runs[0].id}'/></filter></link-entity></entity></fetch>`;
+      const fx=`<fetch top='300'><entity name='bvr_reviewfinding'><attribute name='bvr_rulecode'/><attribute name='bvr_status'/><attribute name='bvr_severity'/><attribute name='bvr_category'/><attribute name='bvr_aigenerated'/><order attribute='bvr_severity' descending='true'/><link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid' alias='fr'><attribute name='bvr_name'/><attribute name='bvr_flowreviewid'/><filter><condition attribute='bvr_runid' operator='eq' value='${runs[0].id}'/></filter></link-entity></entity></fetch>`;
       const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding,'?fetchXml='+encodeURIComponent(fx));
-      rows=r.entities.map(e=>({ flow:e['fr.br_name']||'', rule:e.br_rulecode, status:String(fmt(e,'br_status')||'').toLowerCase(), sev:String(fmt(e,'br_severity')||'info').toLowerCase(), cat:fmt(e,'br_category')||'', ai:!!e.br_aigenerated, _id:e['fr.br_flowreviewid'] })); }
+      rows=r.entities.map(e=>({ flow:e['fr.bvr_name']||'', rule:e.bvr_rulecode, status:String(fmt(e,'bvr_status')||'').toLowerCase(), sev:String(fmt(e,'bvr_severity')||'info').toLowerCase(), cat:fmt(e,'bvr_category')||'', ai:!!e.bvr_aigenerated, _id:e['fr.bvr_flowreviewid'] })); }
     else rows=DEMO_FINDINGS.slice();
     dgrid('grid-findings',{ title:'Findings', entity:CONFIG.entities.finding, sub:'latest run · click a row to open the flow review',
       columns:[{key:'flow',label:'Flow',render:(v)=>`<span class="dg-link">${esc(v)}</span>`},{key:'rule',label:'Rule',render:v=>`<span class="mono" style="font-size:11.5px">${esc(v)}</span>`},{key:'status',label:'Status',render:rChipS},{key:'sev',label:'Severity',render:rSevS},{key:'cat',label:'Category'},{key:'ai',label:'AI',render:rAiS}], rows });
@@ -1067,8 +1067,8 @@ async function loadFindings(){ if(FIND_LOADED) return; FIND_LOADED=true;
 async function loadStandards(){ if(STDS_LOADED) return; STDS_LOADED=true;
   const host=document.getElementById('grid-standards'); host.innerHTML=spinCard;
   try{ let rows;
-    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,"?$select=br_name,br_code,br_version,br_isactive&$orderby=br_name asc&$top=100");
-      rows=r.entities.map(e=>({ name:e.br_name, code:e.br_code, version:e.br_version, active:!!e.br_isactive, _goto:'std' })); }
+    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,"?$select=bvr_name,bvr_code,bvr_version,bvr_isactive&$orderby=bvr_name asc&$top=100");
+      rows=r.entities.map(e=>({ name:e.bvr_name, code:e.bvr_code, version:e.bvr_version, active:!!e.bvr_isactive, _goto:'std' })); }
     else rows=DEMO_STANDARDS.slice();
     dgrid('grid-standards',{ title:'Review Standards', entity:CONFIG.entities.standard, link:true, sub:'click a standard to open its rules',
       columns:[{key:'name',label:'Name'},{key:'code',label:'Code',render:v=>`<span class="mono">${esc(v)}</span>`},{key:'version',label:'Version',render:v=>`<span class="mono">${esc(v)}</span>`},{key:'active',label:'Active',render:v=>v?'<span class="chip pass">Yes</span>':'<span class="chip na">No</span>'}], rows });

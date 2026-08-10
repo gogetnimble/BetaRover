@@ -34,7 +34,7 @@ Three decisions shaped the build:
 
 ### 1. Dataverse tables (`solution/schema/tables.json`)
 
-Six tables, publisher prefix `br_`:
+Six tables, publisher prefix `bvr_`:
 
 - **Review Standard / Review Rule** — the criteria *you* configure. This is the
   "entity or table" the brief called for. The bundled seed encodes the sample
@@ -53,8 +53,8 @@ A scheduled cloud flow:
 3. **Enumerate flows** — `List rows` on `workflows` (`$filter=category eq 5`,
    `$select=workflowid,name,clientdata,...`, bounded `$top`), then the
    **Management API** for owner/env/state.
-4. **Upsert Flow Inventory** (keyed on `br_flowid`); skip unchanged definitions
-   via `br_definitionhash`.
+4. **Upsert Flow Inventory** (keyed on `bvr_flowid`); skip unchanged definitions
+   via `bvr_definitionhash`.
 5. For each flow, **call the Review Engine** via the custom connector, passing
    the flow's `displayName`, `clientData`, `inventory`, and the ruleset.
 6. Persist a **Flow Review** and its **Findings**.
@@ -88,21 +88,21 @@ Automate, so the flow calls the engine as a first-class action.
 
 ### 5. Web resource UI (`webresource/`)
 
-A single self-contained HTML web resource (`br_flowreview_app.html`) surfaced
+A single self-contained HTML web resource (`bvr_flowreview_app.html`) surfaced
 full-page in the model-driven app. Three tabs — **Tenant Dashboard**, **Flow
-Review**, **Standard & Rules** — all reading/writing the `br_*` tables via
+Review**, **Standard & Rules** — all reading/writing the `bvr_*` tables via
 `Xrm.WebApi`. It ships with a **sample-data preview mode** (used automatically
 when opened outside Dataverse) so the UI can be reviewed without a tenant.
 
-Two user actions write data: **New rule** creates a `br_reviewrule` row, and
-**Run review now** creates an on-demand `br_reviewrun` (which triggers the
+Two user actions write data: **New rule** creates a `bvr_reviewrule` row, and
+**Run review now** creates an on-demand `bvr_reviewrun` (which triggers the
 On-Demand flow, below). Full detail in
 [`../webresource/README.md`](../webresource/README.md).
 
 ### 6. On-demand review (`flows/on-demand-review/`)
 
 The single-flow counterpart to the nightly crawl. A Dataverse row-added trigger
-on `br_reviewrun` (source `ondemand`) reviews one flow immediately when a user
+on `bvr_reviewrun` (source `ondemand`) reviews one flow immediately when a user
 clicks **Run review now**, reusing the crawl's review body (ideally a shared
 child flow). This is why "click a flow to review" and "run nightly" are one code
 path, not two.

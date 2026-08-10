@@ -1,4 +1,4 @@
-# Web resource — `br_flowreview_app.html`
+# Web resource — `bvr_flowreview_app.html`
 
 The user interface of the Ember solution: a single, self-contained
 HTML web resource embedded in the **Ember** model-driven app. No build
@@ -6,17 +6,17 @@ step, no external libraries, no CDN — it is CSP-safe and deployable as-is.
 
 ## What it does
 
-Three tabs, all reading and writing the six `br_*` tables through the Dataverse
+Three tabs, all reading and writing the six `bvr_*` tables through the Dataverse
 Web API:
 
 | Tab | Reads | Writes |
 |-----|-------|--------|
-| **Tenant Dashboard** | latest `br_reviewrun` + its `br_flowreview` rows; findings aggregated by severity and by rule | — |
-| **Flow Review** | one `br_flowreview` + its `br_reviewfinding` rows (AI findings shown separately) | creates an on-demand `br_reviewrun` (**Run review now**) |
-| **Standard & Rules** | active `br_reviewstandard` + its `br_reviewrule` rows | creates rules (**New rule**); enable/disable toggles; **Active** and **Review all flows** toggles on the standard |
+| **Tenant Dashboard** | latest `bvr_reviewrun` + its `bvr_flowreview` rows; findings aggregated by severity and by rule | — |
+| **Flow Review** | one `bvr_flowreview` + its `bvr_reviewfinding` rows (AI findings shown separately) | creates an on-demand `bvr_reviewrun` (**Run review now**) |
+| **Standard & Rules** | active `bvr_reviewstandard` + its `bvr_reviewrule` rows | creates rules (**New rule**); enable/disable toggles; **Active** and **Review all flows** toggles on the standard |
 
 Clicking a flow on the dashboard opens its review. **Run review now** creates a
-`br_reviewrun` (trigger source `ondemand`) — see
+`bvr_reviewrun` (trigger source `ondemand`) — see
 [`flows/on-demand-review`](../flows/on-demand-review/README.md) — then polls until
 it completes and refreshes.
 
@@ -42,10 +42,10 @@ Open the file and edit the `CONFIG` and `CHOICES` blocks at the top of the
 - `complianceThreshold` — score at/above which a flow counts as "compliant"
   (default `70`).
 - `entities` — logical table names, if you used a publisher prefix other than
-  `br_`.
+  `bvr_`.
 - `navProps.reviewToInventory` / `navProps.ruleToStandard` — the **navigation
-  property names** for the `br_flowreview → br_flowinventory` and
-  `br_reviewrule → br_reviewstandard` lookups. These default to the lookup
+  property names** for the `bvr_flowreview → bvr_flowinventory` and
+  `bvr_reviewrule → bvr_reviewstandard` lookups. These default to the lookup
   schema names; if the maker portal generated different relationship names,
   set them here (Web API → `$metadata` shows the exact `NavigationProperty`).
 - `poll` — interval/timeout for the **Run review now** wait.
@@ -69,10 +69,10 @@ that fails with a choice error means these are off.
 ## Register and surface it
 
 1. **Add the web resource** to the solution: type **Webpage (HTML)**, name
-   `br_flowreview_app` (schema `br_flowreview_app.html`), upload this file.
+   `bvr_flowreview_app` (schema `bvr_flowreview_app.html`), upload this file.
 2. **Full-page surface (recommended):** in the model-driven app designer, add a
    **Navigation → Subarea** whose **Type = Web resource** and **URL =
-   `$webresource:br_flowreview_app`**. Title it *Dashboard*. This is the
+   `$webresource:bvr_flowreview_app`**. Title it *Dashboard*. This is the
    "full-page custom page" surface chosen in design.
 3. **Deep link (optional):** the resource reads `?flowReviewId=<guid>` (or
    `?id=`) and opens that review on load — useful from a form ribbon button.
@@ -81,9 +81,9 @@ that fails with a choice error means these are off.
 ## Security
 
 The web resource runs **as the signed-in user** and calls the Web API with that
-user's privileges — so viewers need **Read** on the six `br_*` tables, and
+user's privileges — so viewers need **Read** on the six `bvr_*` tables, and
 anyone who uses **New rule** / **Run review now** needs **Create** on
-`br_reviewrule` / `br_reviewrun` respectively. Grant these through a
+`bvr_reviewrule` / `bvr_reviewrun` respectively. Grant these through a
 **Flow Review User** security role. (This is separate from the *crawl*
 application user, which has its own scoped role — see
 [`docs/deployment.md`](../docs/deployment.md) step 8.)

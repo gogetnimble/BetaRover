@@ -51,13 +51,13 @@ package/
   customizations.xml      # the web resource (choices are created by the script)
   [Content_Types].xml
   WebResources/
-    br_flowreview_app.html # the UI (kept in sync with ../../webresource/)
+    bvr_flowreview_app.html # the UI (kept in sync with ../../webresource/)
 ```
 
 Re-pack after editing the web resource:
 
 ```bash
-cp ../../webresource/br_flowreview_app.html package/WebResources/
+cp ../../webresource/bvr_flowreview_app.html package/WebResources/
 cd package && zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
 ```
 
@@ -75,7 +75,7 @@ Bump `<Version>` in `solution.xml` for each release.
 
 - entities with their primary column, then every non-lookup column;
 - lookups as one-to-many relationships (second pass, once both ends exist);
-- the `br_flowid` alternate key;
+- the `bvr_flowid` alternate key;
 - choice columns bound to the global option sets from the imported solution;
 - `--seed` also imports the default standard + its rules from
   [`seed/default-ruleset.json`](seed/default-ruleset.json).

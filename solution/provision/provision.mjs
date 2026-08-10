@@ -44,19 +44,19 @@ const API = `${URL_BASE}/api/data/v9.2`;
 
 /* Map tables.json choice columns to the global option sets shipped in the solution. */
 const GLOBAL_OPTIONSET = {
-  br_category: 'br_rulecategory',
-  br_severity: 'br_severity',
-  br_status: null,            // resolved per-table below (finding vs run vs review)
-  br_ownertype: 'br_ownertype',
-  br_state: 'br_flowstate',
-  br_source: 'br_flowsource',
-  br_triggersource: 'br_triggersource',
+  bvr_category: 'bvr_rulecategory',
+  bvr_severity: 'bvr_severity',
+  bvr_status: null,            // resolved per-table below (finding vs run vs review)
+  bvr_ownertype: 'bvr_ownertype',
+  bvr_state: 'bvr_flowstate',
+  bvr_source: 'bvr_flowsource',
+  bvr_triggersource: 'bvr_triggersource',
 };
 const STATUS_OPTIONSET_BY_TABLE = {
-  br_reviewrun: 'br_runstatus',
-  br_flowreview: 'br_flowreviewstatus',
-  br_reviewfinding: 'br_findingstatus',
-  br_flowtestrun: 'br_teststatus',
+  bvr_reviewrun: 'bvr_runstatus',
+  bvr_flowreview: 'bvr_flowreviewstatus',
+  bvr_reviewfinding: 'bvr_findingstatus',
+  bvr_flowtestrun: 'bvr_teststatus',
 };
 
 async function api(method, path, body, extraHeaders = {}) {
@@ -83,16 +83,16 @@ const label = (t) => ({ '@odata.type': 'Microsoft.Dynamics.CRM.Label', Localized
  * option-value-prefix range (10000xxxxx). These values are deterministic and
  * match the web resource's CHOICES map, so no per-environment choice hunting. */
 const OPTIONSETS = {
-  br_severity:        { label: 'Severity',           opts: [['Info',100000000],['Warning',100000001],['Error',100000002],['Critical',100000003]] },
-  br_rulecategory:    { label: 'Rule category',      opts: [['Naming',100000000],['ErrorHandling',100000001],['Logging',100000002],['Configuration',100000003],['Security',100000004],['Email',100000005],['General',100000006]] },
-  br_findingstatus:   { label: 'Finding status',     opts: [['pass',100000000],['warning',100000001],['fail',100000002],['not_applicable',100000003]] },
-  br_ownertype:       { label: 'Owner type',         opts: [['user',100000000],['application',100000001],['team',100000002],['unknown',100000003]] },
-  br_flowstate:       { label: 'Flow state',         opts: [['Draft',100000000],['Activated',100000001],['Suspended',100000002]] },
-  br_flowsource:      { label: 'Inventory source',   opts: [['dataverse',100000000],['managementapi',100000001],['both',100000002]] },
-  br_runstatus:       { label: 'Run status',         opts: [['Queued',100000000],['Running',100000001],['Completed',100000002],['Failed',100000003]] },
-  br_flowreviewstatus:{ label: 'Flow review status', opts: [['Pass',100000000],['Warning',100000001],['Fail',100000002]] },
-  br_triggersource:   { label: 'Trigger source',     opts: [['schedule',100000000],['ondemand',100000001]] },
-  br_teststatus:      { label: 'Test status',        opts: [['passed',100000000],['failed',100000001],['error',100000002]] },
+  bvr_severity:        { label: 'Severity',           opts: [['Info',100000000],['Warning',100000001],['Error',100000002],['Critical',100000003]] },
+  bvr_rulecategory:    { label: 'Rule category',      opts: [['Naming',100000000],['ErrorHandling',100000001],['Logging',100000002],['Configuration',100000003],['Security',100000004],['Email',100000005],['General',100000006]] },
+  bvr_findingstatus:   { label: 'Finding status',     opts: [['pass',100000000],['warning',100000001],['fail',100000002],['not_applicable',100000003]] },
+  bvr_ownertype:       { label: 'Owner type',         opts: [['user',100000000],['application',100000001],['team',100000002],['unknown',100000003]] },
+  bvr_flowstate:       { label: 'Flow state',         opts: [['Draft',100000000],['Activated',100000001],['Suspended',100000002]] },
+  bvr_flowsource:      { label: 'Inventory source',   opts: [['dataverse',100000000],['managementapi',100000001],['both',100000002]] },
+  bvr_runstatus:       { label: 'Run status',         opts: [['Queued',100000000],['Running',100000001],['Completed',100000002],['Failed',100000003]] },
+  bvr_flowreviewstatus:{ label: 'Flow review status', opts: [['Pass',100000000],['Warning',100000001],['Fail',100000002]] },
+  bvr_triggersource:   { label: 'Trigger source',     opts: [['schedule',100000000],['ondemand',100000001]] },
+  bvr_teststatus:      { label: 'Test status',        opts: [['passed',100000000],['failed',100000001],['error',100000002]] },
 };
 async function optionSetExists(name) {
   try { await api('GET', `GlobalOptionSetDefinitions(Name='${name}')?$select=Name`); return true; }
@@ -170,7 +170,7 @@ function dateAttr(col) {
   };
 }
 function picklistAttr(col, table) {
-  const globalName = col.schemaName === 'br_status'
+  const globalName = col.schemaName === 'bvr_status'
     ? STATUS_OPTIONSET_BY_TABLE[table]
     : GLOBAL_OPTIONSET[col.schemaName];
   if (!globalName) throw new Error(`No global option set mapped for ${table}.${col.schemaName}`);
@@ -182,7 +182,7 @@ function picklistAttr(col, table) {
   };
 }
 function prettyName(schema) {
-  return schema.replace(/^br_/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  return schema.replace(/^bvr_/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 async function createEntity(table) {
@@ -301,28 +301,28 @@ async function seed() {
   const CAT = { Naming: 1, ErrorHandling: 2, Logging: 3, Configuration: 4, Security: 5, Email: 6, General: 7 };
   const SEV = { info: 1, warning: 2, error: 3, critical: 4 };
 
-  // upsert standard by br_code (alternate key not defined, so filter-then-create)
-  const existing = await api('GET', `br_reviewstandards?$select=br_reviewstandardid&$filter=br_code eq '${seedSpec.standard.br_code}'`);
+  // upsert standard by bvr_code (alternate key not defined, so filter-then-create)
+  const existing = await api('GET', `bvr_reviewstandards?$select=bvr_reviewstandardid&$filter=bvr_code eq '${seedSpec.standard.bvr_code}'`);
   let standardId;
-  if (existing.value && existing.value.length) { standardId = existing.value[0].br_reviewstandardid; console.log('= standard exists'); }
+  if (existing.value && existing.value.length) { standardId = existing.value[0].bvr_reviewstandardid; console.log('= standard exists'); }
   else {
-    const r = await api('POST', 'br_reviewstandards', {
-      br_name: seedSpec.standard.br_name, br_code: seedSpec.standard.br_code,
-      br_version: seedSpec.standard.br_version, br_standardtext: seedSpec.standard.br_standardtext, br_isactive: true,
+    const r = await api('POST', 'bvr_reviewstandards', {
+      bvr_name: seedSpec.standard.bvr_name, bvr_code: seedSpec.standard.bvr_code,
+      bvr_version: seedSpec.standard.bvr_version, bvr_standardtext: seedSpec.standard.bvr_standardtext, bvr_isactive: true,
     }, { Prefer: 'return=representation' });
-    standardId = r.br_reviewstandardid; console.log('+ standard ' + seedSpec.standard.br_name);
+    standardId = r.bvr_reviewstandardid; console.log('+ standard ' + seedSpec.standard.bvr_name);
   }
   for (const rule of seedSpec.rules) {
-    const dup = await api('GET', `br_reviewrules?$select=br_reviewruleid&$filter=br_code eq '${rule.br_code}' and _br_standardid_value eq ${standardId}`);
-    if (dup.value && dup.value.length) { console.log(`      = rule ${rule.br_code}`); continue; }
-    await api('POST', 'br_reviewrules', {
-      br_name: rule.br_name, br_code: rule.br_code, br_evaluator: rule.br_evaluator,
-      br_category: CAT[rule.br_category] ?? null, br_severity: SEV[rule.br_severity] ?? null,
-      br_enabled: rule.br_enabled, br_weight: rule.br_weight, br_parametersjson: rule.br_parametersjson,
-      br_remediation: rule.br_remediation, br_description: rule.br_description,
-      'br_standardid@odata.bind': `/br_reviewstandards(${standardId})`,
+    const dup = await api('GET', `bvr_reviewrules?$select=bvr_reviewruleid&$filter=bvr_code eq '${rule.bvr_code}' and _bvr_standardid_value eq ${standardId}`);
+    if (dup.value && dup.value.length) { console.log(`      = rule ${rule.bvr_code}`); continue; }
+    await api('POST', 'bvr_reviewrules', {
+      bvr_name: rule.bvr_name, bvr_code: rule.bvr_code, bvr_evaluator: rule.bvr_evaluator,
+      bvr_category: CAT[rule.bvr_category] ?? null, bvr_severity: SEV[rule.bvr_severity] ?? null,
+      bvr_enabled: rule.bvr_enabled, bvr_weight: rule.bvr_weight, bvr_parametersjson: rule.bvr_parametersjson,
+      bvr_remediation: rule.bvr_remediation, bvr_description: rule.bvr_description,
+      'bvr_standardid@odata.bind': `/bvr_reviewstandards(${standardId})`,
     });
-    console.log(`      + rule ${rule.br_code}`);
+    console.log(`      + rule ${rule.bvr_code}`);
   }
 }
 

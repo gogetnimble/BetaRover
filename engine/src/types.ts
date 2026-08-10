@@ -30,7 +30,7 @@ export interface RuleParameters {
 
 /**
  * A single configurable review criterion. In the deployed solution one of these
- * corresponds to a `br_reviewrule` row in Dataverse.
+ * corresponds to a `bvr_reviewrule` row in Dataverse.
  */
 export interface ReviewRule {
   /** Stable machine code, e.g. `NAMING_CONVENTION`. Maps to an evaluator. */
@@ -51,7 +51,7 @@ export interface ReviewRule {
   description?: string;
 }
 
-/** A named, versioned collection of rules — a `br_reviewstandard` row. */
+/** A named, versioned collection of rules — a `bvr_reviewstandard` row. */
 export interface Ruleset {
   standardCode: string;
   standardName: string;
@@ -120,7 +120,7 @@ export interface FlowModel {
   raw: Record<string, unknown>;
 }
 
-/** One rule outcome for one flow. Corresponds to a `br_reviewfinding` row. */
+/** One rule outcome for one flow. Corresponds to a `bvr_reviewfinding` row. */
 export interface Finding {
   ruleCode: string;
   ruleName: string;

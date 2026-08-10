@@ -1,7 +1,7 @@
 {
   "publisher": {
-    "prefix": "br",
-    "name": "BetaRover",
+    "prefix": "bvr",
+    "name": "Beta Rover Inc",
     "description": "Publisher prefix for the Ember solution. Change to match your own publisher before deploying."
   },
   "solution": {
@@ -11,143 +11,143 @@
   "note": "Deployable specification for the Dataverse tables. Author these via the maker portal, `pac`, or a deployment script. Choice option-set values are illustrative; adjust to your org's conventions.",
   "tables": [
     {
-      "schemaName": "br_reviewstandard",
+      "schemaName": "bvr_reviewstandard",
       "displayName": "Review Standard",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "A named, versioned collection of review rules. One row per delivery standard.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 200, "required": true, "isPrimary": true },
-        { "schemaName": "br_code", "type": "Text", "maxLength": 50, "required": true, "description": "Stable code, e.g. CMA-PA-STD." },
-        { "schemaName": "br_version", "type": "Text", "maxLength": 20 },
-        { "schemaName": "br_standardtext", "type": "Multiline", "maxLength": 100000, "description": "Human-readable standard, passed to the AI reviewer for context." },
-        { "schemaName": "br_isactive", "type": "Boolean", "default": true },
-        { "schemaName": "br_reviewallflows", "type": "Boolean", "default": false, "description": "When true, the nightly crawl reviews every flow including turned-off (draft/suspended) ones. When false (default), only activated flows are reviewed. Set from the web resource's Standard & Rules tab." }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 200, "required": true, "isPrimary": true },
+        { "schemaName": "bvr_code", "type": "Text", "maxLength": 50, "required": true, "description": "Stable code, e.g. CMA-PA-STD." },
+        { "schemaName": "bvr_version", "type": "Text", "maxLength": 20 },
+        { "schemaName": "bvr_standardtext", "type": "Multiline", "maxLength": 100000, "description": "Human-readable standard, passed to the AI reviewer for context." },
+        { "schemaName": "bvr_isactive", "type": "Boolean", "default": true },
+        { "schemaName": "bvr_reviewallflows", "type": "Boolean", "default": false, "description": "When true, the nightly crawl reviews every flow including turned-off (draft/suspended) ones. When false (default), only activated flows are reviewed. Set from the web resource's Standard & Rules tab." }
       ]
     },
     {
-      "schemaName": "br_reviewrule",
+      "schemaName": "bvr_reviewrule",
       "displayName": "Review Rule",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "A single configurable review criterion. The engine evaluates enabled rules against every flow.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 200, "required": true, "isPrimary": true },
-        { "schemaName": "br_code", "type": "Text", "maxLength": 50, "required": true, "description": "Machine code, e.g. NAMING_CONVENTION." },
-        { "schemaName": "br_category", "type": "Choice", "options": ["Naming", "ErrorHandling", "Logging", "Configuration", "Security", "Email", "General"] },
-        { "schemaName": "br_evaluator", "type": "Text", "maxLength": 100, "description": "Deterministic evaluator key, or 'ai' to defer to the AI pass." },
-        { "schemaName": "br_severity", "type": "Choice", "options": ["info", "warning", "error", "critical"] },
-        { "schemaName": "br_enabled", "type": "Boolean", "default": true },
-        { "schemaName": "br_weight", "type": "WholeNumber", "min": 0, "max": 100, "default": 1 },
-        { "schemaName": "br_parametersjson", "type": "Multiline", "maxLength": 10000, "description": "JSON parameters for the evaluator (prefix, approved senders, scope names, ...)." },
-        { "schemaName": "br_remediation", "type": "Multiline", "maxLength": 4000 },
-        { "schemaName": "br_description", "type": "Multiline", "maxLength": 4000 },
-        { "schemaName": "br_standardid", "type": "Lookup", "target": "br_reviewstandard", "required": true }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 200, "required": true, "isPrimary": true },
+        { "schemaName": "bvr_code", "type": "Text", "maxLength": 50, "required": true, "description": "Machine code, e.g. NAMING_CONVENTION." },
+        { "schemaName": "bvr_category", "type": "Choice", "options": ["Naming", "ErrorHandling", "Logging", "Configuration", "Security", "Email", "General"] },
+        { "schemaName": "bvr_evaluator", "type": "Text", "maxLength": 100, "description": "Deterministic evaluator key, or 'ai' to defer to the AI pass." },
+        { "schemaName": "bvr_severity", "type": "Choice", "options": ["info", "warning", "error", "critical"] },
+        { "schemaName": "bvr_enabled", "type": "Boolean", "default": true },
+        { "schemaName": "bvr_weight", "type": "WholeNumber", "min": 0, "max": 100, "default": 1 },
+        { "schemaName": "bvr_parametersjson", "type": "Multiline", "maxLength": 10000, "description": "JSON parameters for the evaluator (prefix, approved senders, scope names, ...)." },
+        { "schemaName": "bvr_remediation", "type": "Multiline", "maxLength": 4000 },
+        { "schemaName": "bvr_description", "type": "Multiline", "maxLength": 4000 },
+        { "schemaName": "bvr_standardid", "type": "Lookup", "target": "bvr_reviewstandard", "required": true }
       ]
     },
     {
-      "schemaName": "br_flowinventory",
+      "schemaName": "bvr_flowinventory",
       "displayName": "Flow Inventory",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "One row per discovered cloud flow. Populated by the crawl from the Dataverse workflows table and enriched from the Power Automate Management API.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true, "description": "Flow display name (workflows.name)." },
-        { "schemaName": "br_flowid", "type": "Text", "maxLength": 50, "description": "workflowid GUID (unique key)." },
-        { "schemaName": "br_environment", "type": "Text", "maxLength": 200 },
-        { "schemaName": "br_ownertype", "type": "Choice", "options": ["user", "application", "team", "unknown"] },
-        { "schemaName": "br_ownername", "type": "Text", "maxLength": 200 },
-        { "schemaName": "br_state", "type": "Choice", "options": ["Draft", "Activated", "Suspended"] },
-        { "schemaName": "br_solution", "type": "Text", "maxLength": 200 },
-        { "schemaName": "br_source", "type": "Choice", "options": ["dataverse", "managementapi", "both"] },
-        { "schemaName": "br_lastmodifiedon_src", "type": "DateTime", "description": "modifiedon of the source flow." },
-        { "schemaName": "br_definitionhash", "type": "Text", "maxLength": 64, "description": "Hash of clientdata to detect changes between runs." },
-        { "schemaName": "br_triggertype", "type": "Text", "maxLength": 100 },
-        { "schemaName": "br_actioncount", "type": "WholeNumber" },
-        { "schemaName": "br_lastreviewedon", "type": "DateTime", "description": "Last time this flow was code-reviewed against the standard (static review)." },
-        { "schemaName": "br_lasttestpassedon", "type": "DateTime", "description": "Last time this flow's mocked unit tests all passed (behavioral test)." },
-        { "schemaName": "br_testcasecount", "type": "WholeNumber", "description": "Number of unit-test cases defined for this flow." }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true, "description": "Flow display name (workflows.name)." },
+        { "schemaName": "bvr_flowid", "type": "Text", "maxLength": 50, "description": "workflowid GUID (unique key)." },
+        { "schemaName": "bvr_environment", "type": "Text", "maxLength": 200 },
+        { "schemaName": "bvr_ownertype", "type": "Choice", "options": ["user", "application", "team", "unknown"] },
+        { "schemaName": "bvr_ownername", "type": "Text", "maxLength": 200 },
+        { "schemaName": "bvr_state", "type": "Choice", "options": ["Draft", "Activated", "Suspended"] },
+        { "schemaName": "bvr_solution", "type": "Text", "maxLength": 200 },
+        { "schemaName": "bvr_source", "type": "Choice", "options": ["dataverse", "managementapi", "both"] },
+        { "schemaName": "bvr_lastmodifiedon_src", "type": "DateTime", "description": "modifiedon of the source flow." },
+        { "schemaName": "bvr_definitionhash", "type": "Text", "maxLength": 64, "description": "Hash of clientdata to detect changes between runs." },
+        { "schemaName": "bvr_triggertype", "type": "Text", "maxLength": 100 },
+        { "schemaName": "bvr_actioncount", "type": "WholeNumber" },
+        { "schemaName": "bvr_lastreviewedon", "type": "DateTime", "description": "Last time this flow was code-reviewed against the standard (static review)." },
+        { "schemaName": "bvr_lasttestpassedon", "type": "DateTime", "description": "Last time this flow's mocked unit tests all passed (behavioral test)." },
+        { "schemaName": "bvr_testcasecount", "type": "WholeNumber", "description": "Number of unit-test cases defined for this flow." }
       ],
-      "alternateKeys": [{ "name": "br_flowid_key", "columns": ["br_flowid"] }]
+      "alternateKeys": [{ "name": "bvr_flowid_key", "columns": ["bvr_flowid"] }]
     },
     {
-      "schemaName": "br_reviewrun",
+      "schemaName": "bvr_reviewrun",
       "displayName": "Review Run",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "One crawl + review execution. Parent of the per-flow reviews.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 200, "required": true, "isPrimary": true, "description": "e.g. 'Crawl 2026-08-04 06:00'." },
-        { "schemaName": "br_startedon", "type": "DateTime" },
-        { "schemaName": "br_completedon", "type": "DateTime" },
-        { "schemaName": "br_status", "type": "Choice", "options": ["Queued", "Running", "Completed", "Failed"] },
-        { "schemaName": "br_standardid", "type": "Lookup", "target": "br_reviewstandard" },
-        { "schemaName": "br_flowsscanned", "type": "WholeNumber" },
-        { "schemaName": "br_findingscount", "type": "WholeNumber" },
-        { "schemaName": "br_averagescore", "type": "Decimal", "precision": 2 },
-        { "schemaName": "br_triggeredby", "type": "Text", "maxLength": 200 },
-        { "schemaName": "br_triggersource", "type": "Choice", "options": ["schedule", "ondemand"], "default": "schedule", "description": "How the run was started. 'ondemand' rows are created by the web resource's Run review now button." },
-        { "schemaName": "br_targetflowid", "type": "Text", "maxLength": 50, "description": "For on-demand runs, the single workflowid to review. Empty on scheduled (all-flow) runs." }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 200, "required": true, "isPrimary": true, "description": "e.g. 'Crawl 2026-08-04 06:00'." },
+        { "schemaName": "bvr_startedon", "type": "DateTime" },
+        { "schemaName": "bvr_completedon", "type": "DateTime" },
+        { "schemaName": "bvr_status", "type": "Choice", "options": ["Queued", "Running", "Completed", "Failed"] },
+        { "schemaName": "bvr_standardid", "type": "Lookup", "target": "bvr_reviewstandard" },
+        { "schemaName": "bvr_flowsscanned", "type": "WholeNumber" },
+        { "schemaName": "bvr_findingscount", "type": "WholeNumber" },
+        { "schemaName": "bvr_averagescore", "type": "Decimal", "precision": 2 },
+        { "schemaName": "bvr_triggeredby", "type": "Text", "maxLength": 200 },
+        { "schemaName": "bvr_triggersource", "type": "Choice", "options": ["schedule", "ondemand"], "default": "schedule", "description": "How the run was started. 'ondemand' rows are created by the web resource's Run review now button." },
+        { "schemaName": "bvr_targetflowid", "type": "Text", "maxLength": 50, "description": "For on-demand runs, the single workflowid to review. Empty on scheduled (all-flow) runs." }
       ]
     },
     {
-      "schemaName": "br_flowreview",
+      "schemaName": "bvr_flowreview",
       "displayName": "Flow Review",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "The review of one flow within one run. Parent of the findings; carries the per-flow score.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 400, "required": true, "isPrimary": true },
-        { "schemaName": "br_runid", "type": "Lookup", "target": "br_reviewrun", "required": true },
-        { "schemaName": "br_flowinventoryid", "type": "Lookup", "target": "br_flowinventory", "required": true },
-        { "schemaName": "br_score", "type": "WholeNumber", "min": 0, "max": 100 },
-        { "schemaName": "br_passed", "type": "WholeNumber" },
-        { "schemaName": "br_failed", "type": "WholeNumber" },
-        { "schemaName": "br_warnings", "type": "WholeNumber" },
-        { "schemaName": "br_status", "type": "Choice", "options": ["Pass", "Warning", "Fail"] }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 400, "required": true, "isPrimary": true },
+        { "schemaName": "bvr_runid", "type": "Lookup", "target": "bvr_reviewrun", "required": true },
+        { "schemaName": "bvr_flowinventoryid", "type": "Lookup", "target": "bvr_flowinventory", "required": true },
+        { "schemaName": "bvr_score", "type": "WholeNumber", "min": 0, "max": 100 },
+        { "schemaName": "bvr_passed", "type": "WholeNumber" },
+        { "schemaName": "bvr_failed", "type": "WholeNumber" },
+        { "schemaName": "bvr_warnings", "type": "WholeNumber" },
+        { "schemaName": "bvr_status", "type": "Choice", "options": ["Pass", "Warning", "Fail"] }
       ]
     },
     {
-      "schemaName": "br_reviewfinding",
+      "schemaName": "bvr_reviewfinding",
       "displayName": "Review Finding",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "A single rule outcome for a single flow in a single run.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 400, "required": true, "isPrimary": true, "description": "Auto-numberable, e.g. '<flow> - <ruleCode>'." },
-        { "schemaName": "br_flowreviewid", "type": "Lookup", "target": "br_flowreview", "required": true },
-        { "schemaName": "br_ruleid", "type": "Lookup", "target": "br_reviewrule" },
-        { "schemaName": "br_rulecode", "type": "Text", "maxLength": 50 },
-        { "schemaName": "br_status", "type": "Choice", "options": ["pass", "warning", "fail", "not_applicable"] },
-        { "schemaName": "br_severity", "type": "Choice", "options": ["info", "warning", "error", "critical"] },
-        { "schemaName": "br_category", "type": "Choice", "options": ["Naming", "ErrorHandling", "Logging", "Configuration", "Security", "Email", "General"] },
-        { "schemaName": "br_message", "type": "Multiline", "maxLength": 4000 },
-        { "schemaName": "br_evidence", "type": "Multiline", "maxLength": 4000 },
-        { "schemaName": "br_remediation", "type": "Multiline", "maxLength": 4000 },
-        { "schemaName": "br_aigenerated", "type": "Boolean", "default": false }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 400, "required": true, "isPrimary": true, "description": "Auto-numberable, e.g. '<flow> - <ruleCode>'." },
+        { "schemaName": "bvr_flowreviewid", "type": "Lookup", "target": "bvr_flowreview", "required": true },
+        { "schemaName": "bvr_ruleid", "type": "Lookup", "target": "bvr_reviewrule" },
+        { "schemaName": "bvr_rulecode", "type": "Text", "maxLength": 50 },
+        { "schemaName": "bvr_status", "type": "Choice", "options": ["pass", "warning", "fail", "not_applicable"] },
+        { "schemaName": "bvr_severity", "type": "Choice", "options": ["info", "warning", "error", "critical"] },
+        { "schemaName": "bvr_category", "type": "Choice", "options": ["Naming", "ErrorHandling", "Logging", "Configuration", "Security", "Email", "General"] },
+        { "schemaName": "bvr_message", "type": "Multiline", "maxLength": 4000 },
+        { "schemaName": "bvr_evidence", "type": "Multiline", "maxLength": 4000 },
+        { "schemaName": "bvr_remediation", "type": "Multiline", "maxLength": 4000 },
+        { "schemaName": "bvr_aigenerated", "type": "Boolean", "default": false }
       ]
     },
     {
-      "schemaName": "br_flowtestcase",
+      "schemaName": "bvr_flowtestcase",
       "displayName": "Flow Test Case",
-      "primaryColumn": "br_name",
+      "primaryColumn": "bvr_name",
       "description": "A mocked unit test for a flow: pins the trigger + connector outputs and asserts the simulated run (engine TestCase shape).",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true },
-        { "schemaName": "br_flowinventoryid", "type": "Lookup", "target": "br_flowinventory", "required": true },
-        { "schemaName": "br_casejson", "type": "Multiline", "maxLength": 100000, "description": "The test case as JSON: { trigger, mocks, variables, asserts }." },
-        { "schemaName": "br_enabled", "type": "Boolean", "default": true },
-        { "schemaName": "br_description", "type": "Multiline", "maxLength": 4000 }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true },
+        { "schemaName": "bvr_flowinventoryid", "type": "Lookup", "target": "bvr_flowinventory", "required": true },
+        { "schemaName": "bvr_casejson", "type": "Multiline", "maxLength": 100000, "description": "The test case as JSON: { trigger, mocks, variables, asserts }." },
+        { "schemaName": "bvr_enabled", "type": "Boolean", "default": true },
+        { "schemaName": "bvr_description", "type": "Multiline", "maxLength": 4000 }
       ]
     },
     {
-      "schemaName": "br_flowtestrun",
+      "schemaName": "bvr_flowtestrun",
       "displayName": "Flow Test Run",
-      "primaryColumn": "br_name",
-      "description": "One mock-execution of a flow's test cases. Stamps br_lasttestpassedon on the flow when all pass.",
+      "primaryColumn": "bvr_name",
+      "description": "One mock-execution of a flow's test cases. Stamps bvr_lasttestpassedon on the flow when all pass.",
       "columns": [
-        { "schemaName": "br_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true },
-        { "schemaName": "br_flowinventoryid", "type": "Lookup", "target": "br_flowinventory", "required": true },
-        { "schemaName": "br_status", "type": "Choice", "options": ["passed", "failed", "error"] },
-        { "schemaName": "br_passed", "type": "WholeNumber" },
-        { "schemaName": "br_failed", "type": "WholeNumber" },
-        { "schemaName": "br_durationms", "type": "WholeNumber" },
-        { "schemaName": "br_ranon", "type": "DateTime" },
-        { "schemaName": "br_resultjson", "type": "Multiline", "maxLength": 100000, "description": "Per-case results + traces (engine TestResult[])." }
+        { "schemaName": "bvr_name", "type": "Text", "maxLength": 300, "required": true, "isPrimary": true },
+        { "schemaName": "bvr_flowinventoryid", "type": "Lookup", "target": "bvr_flowinventory", "required": true },
+        { "schemaName": "bvr_status", "type": "Choice", "options": ["passed", "failed", "error"] },
+        { "schemaName": "bvr_passed", "type": "WholeNumber" },
+        { "schemaName": "bvr_failed", "type": "WholeNumber" },
+        { "schemaName": "bvr_durationms", "type": "WholeNumber" },
+        { "schemaName": "bvr_ranon", "type": "DateTime" },
+        { "schemaName": "bvr_resultjson", "type": "Multiline", "maxLength": 100000, "description": "Per-case results + traces (engine TestResult[])." }
       ]
     }
   ]

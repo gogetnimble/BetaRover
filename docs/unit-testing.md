@@ -61,21 +61,21 @@ indexing, `@{…}` interpolation, and ~35 common functions. Unknown functions
 
 | Table | Holds |
 |-------|-------|
-| `br_flowtestcase` | one test case per flow — `br_casejson` is the engine `TestCase` (`{ trigger, mocks, variables, asserts }`), linked to `br_flowinventory` |
-| `br_flowtestrun` | one mock-execution — status (`passed`/`failed`/`error`), pass/fail counts, duration, `br_resultjson` (the `TestResult[]`) |
+| `bvr_flowtestcase` | one test case per flow — `bvr_casejson` is the engine `TestCase` (`{ trigger, mocks, variables, asserts }`), linked to `bvr_flowinventory` |
+| `bvr_flowtestrun` | one mock-execution — status (`passed`/`failed`/`error`), pass/fail counts, duration, `bvr_resultjson` (the `TestResult[]`) |
 
 A flow (or the engine host) reads the enabled test cases for a flow, calls
-`runTestSuite`, writes a `br_flowtestrun`, and — when green — stamps
-`br_lasttestpassedon` on the flow.
+`runTestSuite`, writes a `bvr_flowtestrun`, and — when green — stamps
+`bvr_lasttestpassedon` on the flow.
 
 ## "Last validated" — two independent signals
 
 Per the design decision, the **Flow Coverage** view shows two columns, because
 they answer different questions:
 
-- **`br_lastreviewedon`** — last **static review** against the standard (naming,
+- **`bvr_lastreviewedon`** — last **static review** against the standard (naming,
   scopes, bounded queries…). Available today from the review engine.
-- **`br_lasttestpassedon`** — last time the flow's **mocked unit tests** all
+- **`bvr_lasttestpassedon`** — last time the flow's **mocked unit tests** all
   passed (behavioral). Comes from the mock runner.
 
 A flow can be review-clean but behaviorally untested, or vice-versa; showing both

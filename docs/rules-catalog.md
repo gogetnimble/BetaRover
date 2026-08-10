@@ -2,7 +2,7 @@
 
 Each rule maps a section of the delivery standard to a deterministic evaluator in
 `engine/src/rules/evaluators.ts`. Every value in **Parameters** is configurable
-per tenant via the `br_parametersjson` column on the Review Rule row — nothing is
+per tenant via the `bvr_parametersjson` column on the Review Rule row — nothing is
 hard-coded. The bundled defaults (which encode the sample CMA standard) live in
 `engine/src/defaultRuleset.ts` and are emitted to
 `solution/seed/default-ruleset.json`.
@@ -53,7 +53,7 @@ hard-coded. The bundled defaults (which encode the sample CMA standard) live in
 
 ## Adding or changing a rule
 
-- **Change behaviour** (thresholds, names, lists): edit the `br_parametersjson`
+- **Change behaviour** (thresholds, names, lists): edit the `bvr_parametersjson`
   on the Review Rule row in Dataverse. No code change, no redeploy.
 - **Add a new check type**: add an evaluator to
   `engine/src/rules/evaluators.ts`, register it in `evaluatorRegistry`, add a

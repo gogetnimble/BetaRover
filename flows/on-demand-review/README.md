@@ -7,24 +7,24 @@ change.
 
 ## How it is triggered
 
-The web resource (`webresource/br_flowreview_app.html`) does **not** call the
+The web resource (`webresource/bvr_flowreview_app.html`) does **not** call the
 flow directly. Instead — per the "reuse the same cloud flow" decision — it
-**creates a `br_reviewrun` row** with:
+**creates a `bvr_reviewrun` row** with:
 
 | Column | Value |
 |--------|-------|
-| `br_triggersource` | `ondemand` |
-| `br_targetflowid` | the `workflowid` of the flow to review |
-| `br_status` | `Queued` |
-| `br_triggeredby` | the current user |
-| `br_standardid` | the active standard (optional) |
+| `bvr_triggersource` | `ondemand` |
+| `bvr_targetflowid` | the `workflowid` of the flow to review |
+| `bvr_status` | `Queued` |
+| `bvr_triggeredby` | the current user |
+| `bvr_standardid` | the active standard (optional) |
 
-This flow is a **Dataverse "When a row is added"** trigger on `br_reviewruns`,
-filtered to `br_triggersource eq ondemand`. Creating the row is the trigger; the
+This flow is a **Dataverse "When a row is added"** trigger on `bvr_reviewruns`,
+filtered to `bvr_triggersource eq ondemand`. Creating the row is the trigger; the
 web resource then polls the run's status and refreshes when it completes.
 
 ```
-Web resource ── create br_reviewrun (ondemand) ──► Dataverse
+Web resource ── create bvr_reviewrun (ondemand) ──► Dataverse
                                                       │  row-added trigger
                                                       ▼
                                         BR - Flow Review - On-Demand
@@ -43,7 +43,7 @@ Orchestrator. To avoid maintaining it twice, factor it into a **child flow**:
 - **`BR - Flow Review - Review One Flow`** — inputs: `runId`, `workflowid`,
   `ruleset` (or standard id). Does one flow's review and writes the rows.
 - **Crawl Orchestrator** calls it once per flow in its `Apply to each`.
-- **On-Demand** calls it once for `br_targetflowid`.
+- **On-Demand** calls it once for `bvr_targetflowid`.
 
 `steps.json` here shows the inline version for readability; the child-flow split
 is the recommended production factoring and is noted inline.

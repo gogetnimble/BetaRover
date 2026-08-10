@@ -21,15 +21,32 @@ maps it through `PAGE_MAP`, and calls `switchView(...)`. When it detects it's
 embedded (Live), it hides its own in-page tab bar so only the native site map
 shows; opened standalone (preview) it keeps the tab bar so you can still browse.
 
-## Build it (maker portal)
+## It ships in the solution zip
+
+The app module (`bvr_ember`) and its site map (`bvr_embersitemap`) are baked into
+[`../package/customizations.xml`](../package/customizations.xml) and declared as
+root components in [`../package/solution.xml`](../package/solution.xml), so
+**importing `Ember_1_0_0_0.zip` creates the app** — no designer clicks. After
+import, the app appears under **Apps** in the solution and in the Power Apps app
+list as **Ember**; publish and play it.
+
+The app is intentionally **self-contained**: its only declared components are the
+site map and the web resource (both in the same zip), so import order doesn't
+matter — you can import the zip before or after provisioning the tables. The web
+resource talks to the `bvr_*` tables through the Web API directly, so the tables
+don't need to be app components for the UI to work. If you later want native
+table grids as extra pages, add the tables in the app designer.
+
+## Fallback — build it in the maker portal
+
+If your environment rejects the app-module component on import (app/site-map XML
+is the most reference-heavy part of a solution and can't be import-tested here),
+the rest of the zip still applies and you can build the app by hand:
 
 1. **Solutions → your Ember solution → New → App → Model-driven app.** Name it
    **Ember**.
-2. **Add pages / components:**
-   - the **`bvr_flowreview_app`** web resource, and
-   - the six tables (`bvr_flowinventory`, `bvr_reviewrun`, `bvr_flowreview`,
-     `bvr_reviewfinding`, `bvr_reviewstandard`, `bvr_reviewrule`) — needed so the
-     web resource's Web API reads/writes are in the app's scope.
+2. **Add pages / components:** the **`bvr_flowreview_app`** web resource (and,
+   optionally, the eight `bvr_*` tables if you want native grids).
 3. **Edit the site map.** In the app designer open the site map editor, choose
    **Switch to classic** (or edit the app's site map XML), and reproduce
    [`sitemap.xml`](sitemap.xml): two groups (Review, Configuration) with the eight
@@ -53,8 +70,10 @@ resource); clicking a run opens that run's Flow Reviews.
 
 ## Note on packaging
 
-The app module + site map are built in the maker portal rather than hand-authored
-into the solution zip on purpose: app/site-map XML is as import-fragile as the
-option-set XML that failed an earlier build (`0x80048030`). Once you've built the
-app, **export the solution** and the app + site map travel with it for the next
-environment. `sitemap.xml` here is the exact reference to reproduce.
+The app module + site map are hand-authored into the solution zip so a single
+import stands up the whole app. Be aware that app/site-map XML is the most
+reference-heavy part of a solution and can't be import-tested in this repo's
+sandbox — if an environment rejects it, the tables/choices/web resource still
+import fine and you fall back to building the app in the maker portal (above),
+using `sitemap.xml` as the exact reference. Once built (either way), an
+**export** of the solution carries the app + site map to the next environment.

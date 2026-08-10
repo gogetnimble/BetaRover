@@ -21,32 +21,21 @@ maps it through `PAGE_MAP`, and calls `switchView(...)`. When it detects it's
 embedded (Live), it hides its own in-page tab bar so only the native site map
 shows; opened standalone (preview) it keeps the tab bar so you can still browse.
 
-## It ships in the solution zip
+## Build it in the maker portal (the reliable path)
 
-The app module (`bvr_ember`) and its site map (`bvr_embersitemap`) are baked into
-[`../package/customizations.xml`](../package/customizations.xml) and declared as
-root components in [`../package/solution.xml`](../package/solution.xml), so
-**importing `Ember_1_0_1_0.zip` creates the app** — no designer clicks. After
-import, the app appears under **Apps** in the solution and in the Power Apps app
-list as **Ember**; publish and play it.
-
-The app is intentionally **self-contained**: its only declared components are the
-site map and the web resource (both in the same zip), so import order doesn't
-matter — you can import the zip before or after provisioning the tables. The web
-resource talks to the `bvr_*` tables through the Web API directly, so the tables
-don't need to be app components for the UI to work. If you later want native
-table grids as extra pages, add the tables in the app designer.
-
-## Fallback — build it in the maker portal
-
-If your environment rejects the app-module component on import (app/site-map XML
-is the most reference-heavy part of a solution and can't be import-tested here),
-the rest of the zip still applies and you can build the app by hand:
+The app is built in the maker portal rather than shipped in the solution zip. A
+**modern** model-driven app isn't fully described by the app-module + site-map
+XML alone — it also carries an app descriptor/metadata the platform generates —
+so a hand-authored app module in `customizations.xml` is rejected on import (a
+2026-08 attempt failed at 0% / rolled back). Building it in the designer is ~5
+minutes and always works. Once built, an **export** of the solution carries the
+app + site map to the next environment cleanly.
 
 1. **Solutions → your Ember solution → New → App → Model-driven app.** Name it
    **Ember**.
 2. **Add pages / components:** the **`bvr_flowreview_app`** web resource (and,
-   optionally, the eight `bvr_*` tables if you want native grids).
+   optionally, the eight `bvr_*` tables if you want native grids — not required,
+   the web resource reads/writes them through the Web API directly).
 3. **Edit the site map.** In the app designer open the site map editor, choose
    **Switch to classic** (or edit the app's site map XML), and reproduce
    [`sitemap.xml`](sitemap.xml): two groups (Review, Configuration) with the eight
@@ -70,10 +59,10 @@ resource); clicking a run opens that run's Flow Reviews.
 
 ## Note on packaging
 
-The app module + site map are hand-authored into the solution zip so a single
-import stands up the whole app. Be aware that app/site-map XML is the most
-reference-heavy part of a solution and can't be import-tested in this repo's
-sandbox — if an environment rejects it, the tables/choices/web resource still
-import fine and you fall back to building the app in the maker portal (above),
-using `sitemap.xml` as the exact reference. Once built (either way), an
-**export** of the solution carries the app + site map to the next environment.
+The app module + site map are **not** hand-authored into the solution zip: a
+modern model-driven app carries a platform-generated descriptor that a
+hand-written app module in `customizations.xml` doesn't reproduce, so such an
+import is rejected (an attempt failed at 0% and rolled back). Build the app in
+the maker portal per the steps above — `sitemap.xml` is the exact reference —
+then **export** the solution and the app + site map travel with it to the next
+environment.

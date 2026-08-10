@@ -1,8 +1,7 @@
 # Provisioning the Ember tables
 
-The importable solution (`../package/Ember_1_0_1_0.zip`) carries the **publisher**,
-the **web resource**, and the **Ember model-driven app + site map**. The tables
-and global choices are created through the
+The importable solution (`../package/Ember_1_0_1_0.zip`) carries the **publisher**
+and the **web resource**. The tables and global choices are created through the
 Dataverse Web API instead of being hand-authored into the solution XML — that is
 the supported path (it auto-generates default forms/views and assigns choice
 values in the publisher's option-value-prefix range), and it avoids the
@@ -13,13 +12,12 @@ safe to re-run (existing choices/tables/columns/keys are detected and skipped).
 
 ## Order of operations
 
-1. **Import** `../package/Ember_1_0_1_0.zip` (adds the publisher, web resource,
-   and the Ember model-driven app + site map).
+1. **Import** `../package/Ember_1_0_1_0.zip` (adds the publisher + web resource).
 2. **Run a provisioner** (below) to create 10 global choices + 8 tables +
    columns + lookups + alternate key, and optionally seed the default standard +
    rules.
-3. **Publish and play** the Ember app. (If your environment rejected the app
-   component on import, build it in the maker portal per `../app/README.md`.)
+3. **Build the app** in the maker portal (see `../app/README.md`): a model-driven
+   app whose site map opens the web resource at each `?data=` section.
 
 ## Option A — browser console (no install, no token)
 

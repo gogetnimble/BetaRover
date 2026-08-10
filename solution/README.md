@@ -5,9 +5,9 @@ Dataverse environment, in two pieces that reflect what each tool does best:
 
 | Piece | What it delivers | How |
 |-------|------------------|-----|
-| [`package/`](package) | Publisher, solution container (**Ember**), the **web resource**, and the **model-driven app + site map** | import the `.zip` |
+| [`package/`](package) | Publisher, solution container (**Ember**), and the **web resource** | import the `.zip` |
 | [`provision/`](provision) | The **10 global choices** + **8 tables** (columns, lookups, alternate key) + optional seed data | run the browser console **or** Node script |
-| [`app/`](app) | Reference for the app + site map (now baked into the zip; maker-portal fallback if the app component is rejected on import) | ships in the `.zip` |
+| [`app/`](app) | The **model-driven app + site map** — every menu item opens the web resource at a `?data=` section | build in the maker portal |
 
 Choices and tables are provisioned by script rather than baked into the solution
 XML on purpose: creating them through the Dataverse Web API auto-generates the
@@ -40,9 +40,9 @@ export DATAVERSE_TOKEN="$(az account get-access-token \
 node provision.mjs --seed
 ```
 
-See [`provision/README.md`](provision/README.md) for both provisioners. The
-model-driven app + site map already came in with the zip — just publish and play
-it. Then build the custom connector and the two flows per
+See [`provision/README.md`](provision/README.md) for both provisioners. Then
+build the model-driven app in the maker portal (see [`app/README.md`](app/README.md)),
+plus the custom connector and the two flows per
 [`../docs/deployment.md`](../docs/deployment.md).
 
 ## `package/` — the importable solution
@@ -52,19 +52,14 @@ Classic unmanaged solution layout, directly importable and also packable with
 
 ```
 package/
-  solution.xml            # manifest: solution Ember, publisher (bvr), root components
-                          #   (web resource type 61, app module type 80, site map type 62)
-  customizations.xml      # the web resource + the Ember app module & site map
-                          #   (choices + tables are created by the provisioner)
+  solution.xml            # manifest: solution Ember, publisher (bvr), root component
+                          #   (web resource type 61)
+  customizations.xml      # the web resource (choices + tables come from the provisioner;
+                          #   the app + site map are built in the maker portal)
   [Content_Types].xml
   WebResources/
     bvr_flowreview_app.html # the UI (kept in sync with ../../webresource/)
 ```
-
-The app is self-contained — its only components are the site map and the web
-resource, both in this zip — so it imports cleanly whether or not the tables
-exist yet. The web resource reaches the `bvr_*` tables through the Web API at
-runtime, so they don't need to be app components.
 
 Re-pack after editing the web resource:
 

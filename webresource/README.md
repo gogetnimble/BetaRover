@@ -20,6 +20,16 @@ Clicking a flow on the dashboard opens its review. **Run review now** creates a
 [`flows/on-demand-review`](../flows/on-demand-review/README.md) — then polls until
 it completes and refreshes.
 
+### Signed-in user
+
+The header avatar shows the signed-in user's initials. On load it resolves the
+full profile server-side — a **WhoAmI** call for the user id, then a
+`systemuser` retrieve for `fullname`, `internalemailaddress`, `title`,
+`businessunitid`, and the assigned **security roles** (`systemuserroles_association`).
+Clicking the avatar opens a small profile card (name, email, business unit, role
+chips). Initials fall back to the client global context (`userSettings.userName`)
+so the avatar shows instantly before the retrieve completes.
+
 ### Dashboard stats
 
 The dashboard is the app's high-level stat board (a model-driven app can't chart

@@ -123,7 +123,19 @@
   details.adv{margin-top:8px}
   details.adv summary{cursor:pointer;font-size:12px;color:var(--muted);user-select:none;list-style:revert}
   details.adv .ta{margin-top:8px}
-  .havatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7b52d6);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+  .havatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7b52d6);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none;border:0;cursor:pointer;padding:0;font-family:inherit}
+  .havatar:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .uwrap{position:relative;flex:none}
+  .ucard{position:absolute;right:0;top:38px;width:250px;background:var(--panel);border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,.22);padding:14px;z-index:50}
+  .ucard .uc-name{font-size:14px;font-weight:700}
+  .ucard .uc-title{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .ucard .uc-row{display:flex;justify-content:space-between;gap:10px;margin-top:9px;font-size:12px}
+  .ucard .uc-k{color:var(--faint);flex:none}
+  .ucard .uc-v{color:var(--text);text-align:right;word-break:break-word}
+  .ucard .uc-roles{margin-top:11px;border-top:1px dashed var(--border);padding-top:10px}
+  .ucard .uc-rolewrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .ucard .rolechip{font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:20px;background:var(--accent-weak);color:var(--accent-ink);border:1px solid var(--border)}
+  .ucard .uc-foot{margin-top:11px;font-size:10px;color:var(--faint)}
 
   .wr-toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 0 16px}
   .segmented{display:inline-flex; background:var(--panel-2); border:1px solid var(--border); border-radius:9px; padding:3px}
@@ -345,7 +357,10 @@
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
     </button>
     <span class="statuspill preview" id="statusPill"><span class="dot"></span>Preview</span>
-    <div class="havatar" id="userAvatar" title="Signed-in user">··</div>
+    <div class="uwrap">
+      <button class="havatar" id="userAvatar" title="Signed-in user" aria-haspopup="dialog" aria-expanded="false">··</button>
+      <div class="ucard" id="userCard" role="dialog" aria-label="Signed-in user" hidden></div>
+    </div>
   </header>
 
   <!-- In-page nav (mirrors the app site map). Hidden when embedded — the
@@ -655,6 +670,27 @@ const Live = {
       user = g.userSettings && g.userSettings.userName; } catch(_){}
     return { live:true, env, user };
   },
+  async identity(){
+    const g = XRM.Utility.getGlobalContext();
+    const base = g.getClientUrl();
+    // 1) WhoAmI function → the signed-in user's id (and BU / org ids)
+    let userId='';
+    try{
+      const res = await fetch(base+'/api/data/v9.2/WhoAmI', { credentials:'include',
+        headers:{ Accept:'application/json', 'OData-MaxVersion':'4.0', 'OData-Version':'4.0' } });
+      if(res.ok){ const j=await res.json(); userId=j.UserId; }
+    }catch(_){}
+    if(!userId){ try{ userId=String((g.userSettings&&g.userSettings.userId)||'').replace(/[{}]/g,''); }catch(_){} }
+    if(!userId) return null;
+    // 2) systemuser retrieve → name, email, BU, title + security roles (N:N)
+    try{
+      const u = await XRM.WebApi.retrieveRecord('systemuser', userId,
+        "?$select=fullname,internalemailaddress,title,domainname&$expand=businessunitid($select=name),systemuserroles_association($select=name)");
+      const roles=(u.systemuserroles_association||[]).map(r=>r.name).filter(Boolean).sort((a,b)=>a.localeCompare(b));
+      return { userId, fullName:u.fullname||'', email:u.internalemailaddress||u.domainname||'',
+        title:u.title||'', businessUnit:(u.businessunitid&&u.businessunitid.name)||'', roles };
+    }catch(_){ return { userId, fullName:'', email:'', title:'', businessUnit:'', roles:[] }; }
+  },
   async activeStandard(){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,
       "?$select=bvr_name,bvr_code,bvr_version,bvr_standardtext,bvr_isactive,bvr_reviewallflows&$filter=bvr_isactive eq true&$top=1");
@@ -856,6 +892,9 @@ const DEMO_STD = { id:'s1', name:"CMA Power Automate Delivery Standard", code:"C
 const Demo = {
   _rules: DEMO_RULES.slice(),
   async meta(){ return { live:false, env:'CMA — Production (sample)', user:'Preview' }; },
+  async identity(){ return { userId:'0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0', fullName:'Greg Thomas',
+    email:'g.thomas@cma.ca', title:'Principal Architect', businessUnit:'CMA',
+    roles:['Flow Review User','System Customizer'] }; },
   async activeStandard(){ return {...DEMO_STD}; },
   async updateStandard(_id, patch){ if('bvr_reviewallflows' in patch) DEMO_STD.reviewAllFlows=patch.bvr_reviewallflows; if('bvr_isactive' in patch) DEMO_STD.active=patch.bvr_isactive; },
   async recentRuns(){ return [
@@ -1547,6 +1586,31 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   const cur=rootEl.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
   rootEl.setAttribute('data-theme',cur==='dark'?'light':'dark'); });
 
+/* ---- signed-in user profile (WhoAmI + systemuser) ---- */
+function initialsOf(name){ const p=String(name||'').trim().split(/\s+/).filter(Boolean);
+  return p.length>=2 ? (p[0][0]+p[1][0]).toUpperCase() : (p[0]?p[0].slice(0,2).toUpperCase():'··'); }
+async function loadIdentity(){
+  let id=null; try{ id=await DS.identity(); }catch(_){}
+  if(!id) return;
+  const av=$('userAvatar'), card=$('userCard');
+  if(id.fullName){ av.textContent=initialsOf(id.fullName); av.title='Signed in as '+id.fullName+(id.email?(' · '+id.email):''); }
+  const roles=(id.roles&&id.roles.length) ? id.roles.map(r=>`<span class="rolechip">${esc(r)}</span>`).join('')
+    : '<span style="font-size:11px;color:var(--faint)">No roles resolved</span>';
+  card.innerHTML = `
+    <div class="uc-name">${esc(id.fullName||'Signed-in user')}</div>${id.title?`<div class="uc-title">${esc(id.title)}</div>`:''}
+    <div class="uc-row"><span class="uc-k">Email</span><span class="uc-v">${esc(id.email||'—')}</span></div>
+    <div class="uc-row"><span class="uc-k">Business unit</span><span class="uc-v">${esc(id.businessUnit||'—')}</span></div>
+    <div class="uc-roles"><span class="uc-k">Security roles</span><div class="uc-rolewrap">${roles}</div></div>
+    <div class="uc-foot mono">WhoAmI · systemuser ${esc(String(id.userId||'').slice(0,8))}…</div>`;
+}
+(function wireUserCard(){
+  const av=$('userAvatar'), card=$('userCard'); if(!av||!card) return;
+  const setOpen=o=>{ card.hidden=!o; av.setAttribute('aria-expanded', o?'true':'false'); };
+  av.addEventListener('click',e=>{ e.stopPropagation(); setOpen(card.hidden); });
+  document.addEventListener('click',e=>{ if(!card.hidden && !card.contains(e.target) && e.target!==av) setOpen(false); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !card.hidden) setOpen(false); });
+})();
+
 (async function init(){
   const meta = await DS.meta();
   document.getElementById('envPill').textContent = meta.env;
@@ -1556,6 +1620,7 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
   const nm=(meta.user||'').trim(), parts=nm?nm.split(/\s+/).filter(Boolean):[];
   const initials = parts.length>=2 ? (parts[0][0]+parts[1][0]).toUpperCase() : (parts[0]?parts[0].slice(0,2).toUpperCase():'··');
   const av=document.getElementById('userAvatar'); if(av){ av.textContent=initials; av.title = nm?('Signed in as '+nm):'Signed-in user'; }
+  loadIdentity();   // WhoAmI + systemuser → richer avatar tooltip + profile popover
   // Embedded in the model-driven app, the native site map drives navigation, so
   // hide the in-page section nav. Standalone (preview) keeps it for browsing.
   if(meta.live){ const nav=document.getElementById('sectionNav'); if(nav) nav.style.display='none'; }

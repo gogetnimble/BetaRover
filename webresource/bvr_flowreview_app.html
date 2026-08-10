@@ -94,6 +94,21 @@
   .hsearch svg{width:13px;height:13px;flex:none}
   .hsearch input{border:0;background:transparent;color:var(--text);font-size:12.5px;font-family:inherit;width:100%;outline:none}
   .hsearch input::placeholder{color:var(--faint)}
+  .env-select{height:30px;max-width:220px;background:var(--panel-2);border:1px solid var(--border);border-radius:6px;padding:0 8px;color:var(--text);font-size:12.5px;font-family:inherit;outline:none;cursor:pointer}
+  .env-select:focus-visible{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
+  .spark{display:block;width:100%;height:34px}
+  .spark path{fill:none;stroke:var(--accent);stroke-width:1.6}
+  .spark .area{fill:var(--accent);opacity:.12;stroke:none}
+  .spark circle{fill:var(--accent)}
+  .envbreak table{width:100%;border-collapse:collapse}
+  .envbreak th{text-align:left;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--border)}
+  .envbreak td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12.6px;vertical-align:middle}
+  .envbreak tr:last-child td{border-bottom:0}
+  .envbreak tr.sel td{background:var(--panel-2)}
+  .envbreak .mini-bar{display:inline-block;width:64px;height:6px;border-radius:4px;background:var(--panel-2);overflow:hidden;vertical-align:middle;margin-right:7px}
+  .envbreak .mini-bar i{display:block;height:100%}
+  .kpi .val small{font-size:12px;color:var(--faint);font-weight:600}
+  .kpi .subnote{font-size:11px;color:var(--faint);margin-top:3px}
   .havatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7b52d6);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
 
   .wr-toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 0 16px}
@@ -308,6 +323,9 @@
     <h1>Ember</h1>
     <span class="env" id="envPill">—</span>
     <span class="spacer"></span>
+    <select class="env-select" id="envFilter" aria-label="Filter by environment" title="Filter by environment">
+      <option value="">All environments</option>
+    </select>
     <div class="hsearch"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="m14 14 3 3"/></svg><input id="flowSearch" placeholder="Search flows, findings…" aria-label="Search flows and findings"></div>
     <button class="mini" id="themeBtn" title="Toggle light / dark">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
@@ -343,6 +361,7 @@
       </div>
     </div>
     <div class="grid kpis" id="kpis" style="margin-bottom:14px"></div>
+    <div class="grid kpis" id="kpis2" style="margin-bottom:14px"></div>
     <div class="grid split">
       <div class="card">
         <div class="card-h"><h3>Lowest-scoring flows</h3><span class="meta">click a row to open its review</span></div>
@@ -361,6 +380,10 @@
           <div class="pad legend" id="ruleLegend"></div>
         </div>
       </div>
+    </div>
+    <div class="card envbreak" id="envBreak" style="margin-top:14px" hidden>
+      <div class="card-h"><h3>By environment</h3><span class="meta">flows, review score &amp; unit-test health per environment</span></div>
+      <div style="overflow-x:auto" id="envBreakBody"></div>
     </div>
   </section>
 
@@ -508,6 +531,46 @@ const scoreColor = s => s>=85?'var(--good)':s>=70?'var(--warn)':'var(--bad)';
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt = (r,f) => r[f+'@OData.Community.Display.V1.FormattedValue'] ?? r[f];
 const shortDate = d => d ? new Date(d).toLocaleString(undefined,{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+const dayDate = d => d ? new Date(d).toLocaleDateString(undefined,{day:'2-digit',month:'short',year:'numeric'}) : '—';
+
+/* ---- global ENVIRONMENT filter ---- */
+let ENV = '';                                   // '' = all environments
+const odataEsc = s => String(s==null?'':s).replace(/'/g,"''");
+const xmlEsc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+/* FetchXML: filter findings to ENV via bvr_flowreview → bvr_flowinventory. Empty when no filter. */
+const envFetchLink = () => ENV
+  ? `<link-entity name='bvr_flowinventory' from='bvr_flowinventoryid' to='bvr_flowinventoryid'><filter><condition attribute='bvr_environment' operator='eq' value='${xmlEsc(ENV)}'/></filter></link-entity>`
+  : '';
+
+/* tiny sparkline from an array of numbers (0–100) */
+function sparkline(vals){
+  const n = vals.length;
+  if(n<2) return '<div class="subnote">not enough runs yet</div>';
+  const W=140, H=34, pad=3, max=100, min=0;
+  const x=i=> pad + i*(W-2*pad)/(n-1);
+  const y=v=> H-pad - (Math.max(min,Math.min(max,v))-min)/(max-min)*(H-2*pad);
+  const pts = vals.map((v,i)=>`${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  const line = 'M'+pts.join(' L');
+  const area = `M${x(0).toFixed(1)},${(H-pad).toFixed(1)} L`+pts.join(' L')+` L${x(n-1).toFixed(1)},${(H-pad).toFixed(1)} Z`;
+  const lastX=x(n-1).toFixed(1), lastY=y(vals[n-1]).toFixed(1);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><path class="area" d="${area}"/><path d="${line}"/><circle cx="${lastX}" cy="${lastY}" r="2.4"/></svg>`;
+}
+
+/* Roll a flow-inventory row set up into headline + per-environment stats. */
+function summariseInventory(rows){
+  const out = { total:rows.length, activated:0, inactive:0, tested:0, testPassing:0, lastTestPass:null, byEnv:{} };
+  rows.forEach(r=>{
+    const act = r.state==='activated';
+    if(act) out.activated++; else out.inactive++;
+    const tested = (r.cases||0)>0, passing = !!r.testPass;
+    if(tested) out.tested++;
+    if(passing) out.testPassing++;
+    if(r.testPass && (!out.lastTestPass || new Date(r.testPass)>new Date(out.lastTestPass))) out.lastTestPass=r.testPass;
+    const key=r.env||'—'; const e = out.byEnv[key] || (out.byEnv[key]={env:key,count:0,activated:0,tested:0,passing:0});
+    e.count++; if(act) e.activated++; if(tested) e.tested++; if(passing) e.passing++;
+  });
+  return out;
+}
 
 /* ---- LIVE data source (Dataverse Web API via Xrm.WebApi) ---- */
 const Live = {
@@ -532,6 +595,25 @@ const Live = {
     return r.entities.map(e=>({ id:e.bvr_reviewrunid, name:e.bvr_name, completedOn:e.bvr_completedon,
       flowsScanned:e.bvr_flowsscanned||0, findingsCount:e.bvr_findingscount||0, avgScore:Math.round(e.bvr_averagescore||0) }));
   },
+  async environments(){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory, "?$select=bvr_environment&$top=5000");
+    const set = new Set(); r.entities.forEach(e=>{ const v=(e.bvr_environment||'').trim(); if(v) set.add(v); });
+    return [...set].sort((a,b)=>a.localeCompare(b));
+  },
+  async runTrend(){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.run,
+      "?$select=bvr_averagescore,bvr_completedon&$filter=bvr_completedon ne null&$orderby=bvr_completedon desc&$top=8");
+    return r.entities.map(e=>Math.round(e.bvr_averagescore||0)).reverse();
+  },
+  async inventoryStats(){
+    let filter = '';
+    if(ENV) filter = `&$filter=bvr_environment eq '${odataEsc(ENV)}'`;
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,
+      `?$select=bvr_environment,bvr_state,bvr_lastreviewedon,bvr_lasttestpassedon,bvr_testcasecount${filter}&$top=5000`);
+    return summariseInventory(r.entities.map(e=>({
+      env:(e.bvr_environment||'').trim()||'—', state:String(fmt(e,'bvr_state')||'').toLowerCase(),
+      reviewed:e.bvr_lastreviewedon||null, testPass:e.bvr_lasttestpassedon||null, cases:e.bvr_testcasecount||0 })));
+  },
   async flowReviews(runId){
     const nav = CONFIG.navProps.reviewToInventory;
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.flowreview,
@@ -547,7 +629,7 @@ const Live = {
       `<attribute name='bvr_reviewfindingid' alias='cnt' aggregate='count'/>`+
       `<attribute name='bvr_severity' alias='sev' groupby='true'/>`+
       `<link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid'>`+
-      `<filter><condition attribute='bvr_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
+      `<filter><condition attribute='bvr_runid' operator='eq' value='${runId}'/></filter>${envFetchLink()}</link-entity></entity></fetch>`;
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding, "?fetchXml="+encodeURIComponent(fx));
     const out = { error:0, warning:0, info:0 };
     r.entities.forEach(e=>{ const label=String(fmt(e,'sev')||'').toLowerCase(); const n=e.cnt||0;
@@ -560,7 +642,7 @@ const Live = {
       `<attribute name='bvr_rulecode' alias='code' groupby='true'/>`+
       `<attribute name='bvr_status' alias='status' groupby='true'/>`+
       `<link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid'>`+
-      `<filter><condition attribute='bvr_runid' operator='eq' value='${runId}'/></filter></link-entity></entity></fetch>`;
+      `<filter><condition attribute='bvr_runid' operator='eq' value='${runId}'/></filter>${envFetchLink()}</link-entity></entity></fetch>`;
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding, "?fetchXml="+encodeURIComponent(fx));
     const agg = {};
     r.entities.forEach(e=>{ const code=e.code; if(!code) return; const st=String(fmt(e,'status')||'').toLowerCase(); const n=e.cnt||0;
@@ -671,6 +753,21 @@ const Demo = {
   async recentRuns(){ return [
     { id:'run1', name:'Crawl', completedOn:'2026-08-04T02:00:00Z', flowsScanned:312, findingsCount:1204, avgScore:74 },
     { id:'run0', name:'Crawl', completedOn:'2026-08-03T02:00:00Z', flowsScanned:311, findingsCount:1347, avgScore:68 } ]; },
+  async environments(){ return [...new Set(DEMO_FLOWS.map(f=>f.environment))].sort((a,b)=>a.localeCompare(b)); },
+  async runTrend(){ return [57,61,64,66,63,68,72,74]; },
+  async inventoryStats(){
+    const T = { // flow name -> [testCaseCount, lastTestPassIso]
+      'CMA - Membership - Add new Roles on Contact Creation':[4,'2026-08-05T02:00:00Z'],
+      'CMA - Finance - Nightly Invoice Sync':[3,'2026-08-01T02:00:00Z'],
+      'CMA - Marketing - Event Reminder':[2,null],
+      'CMA - System - Validate Logger':[5,'2026-08-06T02:00:00Z'],
+      'Membership Renewal Reminder':[0,null],
+      'Copy of Send Weekly Digest':[0,null] };
+    let rows = DEMO_INVENTORY.map(r=>({ env:r.env, state:String(r.state).toLowerCase(), reviewed:null,
+      cases:(T[r.name]||[0,null])[0], testPass:(T[r.name]||[0,null])[1] }));
+    if(ENV) rows = rows.filter(r=>r.env===ENV);
+    return summariseInventory(rows);
+  },
   async flowReviews(){ return DEMO_FLOWS.slice(); },
   async severity(){ return { error:361, warning:554, info:289 }; },
   async ruleCompliance(){ return [
@@ -738,12 +835,15 @@ async function loadDashboard(){
       document.getElementById('flowRows').innerHTML='<tr><td colspan="4"><div class="empty"><h3>No runs yet</h3>Run the Crawl Orchestrator to populate the dashboard.</div></td></tr>';
       return; }
     const run = runs[0], prev = runs[1];
-    const flows = await DS.flowReviews(run.id);
-    const [sev, ruleComp] = await Promise.all([ DS.severity(run.id), DS.ruleCompliance(run.id) ]);
+    const allFlows = await DS.flowReviews(run.id);
+    const flows = ENV ? allFlows.filter(f=>f.environment===ENV) : allFlows;
+    const [sev, ruleComp, inv, trend] = await Promise.all([
+      DS.severity(run.id), DS.ruleCompliance(run.id), DS.inventoryStats(), DS.runTrend() ]);
     const compliant = flows.filter(f=>f.score>=CONFIG.complianceThreshold).length;
+    const scoped = ENV ? ` · <b>${esc(ENV)}</b>` : '';
 
     document.getElementById('dashSub').innerHTML =
-      `${run.flowsScanned} cloud flows reviewed · standard <b>${esc(std?std.name:'—')}${std&&std.version?' v'+esc(std.version):''}</b>`;
+      `${run.flowsScanned} cloud flows reviewed · standard <b>${esc(std?std.name:'—')}${std&&std.version?' v'+esc(std.version):''}</b>${scoped}`;
     document.getElementById('lastCrawl').textContent = `Last crawl ${shortDate(run.completedOn)}`;
 
     const delta = (cur,pr,unit,goodUp)=>{ if(pr==null) return '<span class="delta flat">—</span>';
@@ -758,7 +858,41 @@ async function loadDashboard(){
       <div class="card kpi"><div class="label">Open findings</div>
         <div class="val">${run.findingsCount.toLocaleString()}</div>${delta(run.findingsCount, prev&&prev.findingsCount, '', false)}</div>
       <div class="card kpi"><div class="label">Error-severity gaps</div>
-        <div class="val" style="color:var(--bad)">${sev.error}</div><span class="delta flat">across all flows</span></div>`;
+        <div class="val" style="color:var(--bad)">${sev.error}</div><span class="delta flat">${ENV?'in '+esc(ENV):'across all flows'}</span></div>`;
+
+    // Second stats row — inventory + unit-test health + trend (env-aware where noted)
+    const testPct = inv.tested ? Math.round(inv.testPassing/inv.tested*100) : 0;
+    const testCol = testPct>=80?'var(--good)':testPct>=50?'var(--warn-text)':'var(--bad)';
+    document.getElementById('kpis2').innerHTML = `
+      <div class="card kpi"><div class="label">Flows discovered${ENV?' · '+esc(ENV):''}</div>
+        <div class="val">${inv.total.toLocaleString()}</div>
+        <div class="subnote">${inv.activated} activated · ${inv.inactive} draft / suspended</div></div>
+      <div class="card kpi"><div class="label">Unit-test pass rate</div>
+        <div class="val" style="color:${testCol}">${testPct}<small>%</small></div>
+        <div class="subnote">${inv.testPassing} of ${inv.tested} tested flow${inv.tested===1?'':'s'} passing</div></div>
+      <div class="card kpi"><div class="label">Last unit-test pass</div>
+        <div class="val" style="font-size:18px">${dayDate(inv.lastTestPass)}</div>
+        <div class="subnote">${inv.tested? inv.tested+' flow'+(inv.tested===1?'':'s')+' have tests' : 'no tests defined yet'}</div></div>
+      <div class="card kpi"><div class="label">Avg-score trend</div>
+        ${sparkline(trend)}
+        <div class="subnote">last ${trend.length} run${trend.length===1?'':'s'} · now ${run.avgScore}/100</div></div>`;
+
+    // Per-environment breakdown (always all environments; the selected one is highlighted)
+    const grp = {};
+    allFlows.forEach(f=>{ const k=f.environment||'—'; const e=grp[k]||(grp[k]={env:k,n:0,sum:0,pass:0,warn:0,fail:0});
+      e.n++; e.sum+=f.score; e.pass+=f.passed; e.warn+=f.warnings; e.fail+=f.failed; });
+    const envRows = Object.values(grp).sort((a,b)=>a.env.localeCompare(b.env));
+    const ebCard=document.getElementById('envBreak'), ebBody=document.getElementById('envBreakBody');
+    if(envRows.length<=1){ ebCard.hidden=true; }
+    else {
+      ebCard.hidden=false;
+      ebBody.innerHTML = `<table><thead><tr><th>Environment</th><th>Flows</th><th>Avg score</th><th>Findings (✓ / ! / ✕)</th></tr></thead><tbody>`+
+        envRows.map(e=>{ const avg=Math.round(e.sum/e.n); const col=scoreColor(avg);
+          return `<tr class="${ENV===e.env?'sel':''}"><td>${esc(e.env)}</td><td>${e.n}</td>`+
+            `<td><span class="mini-bar"><i style="width:${avg}%;background:${col}"></i></span><span class="mono" style="font-weight:700">${avg}</span></td>`+
+            `<td><span class="mono" style="color:var(--good)">${e.pass}✓</span> <span class="mono" style="color:var(--warn-text)">${e.warn}!</span> <span class="mono" style="color:var(--bad)">${e.fail}✕</span></td></tr>`; }).join('')+
+        `</tbody></table>`;
+    }
 
     DASH_FLOWS = flows;
     renderFlowRows(flows.slice(0,8));
@@ -1024,9 +1158,10 @@ let INV_LOADED=false, RUNS_LOADED=false, FR_LOADED=false, FIND_LOADED=false, STD
 async function loadInventory(){ if(INV_LOADED) return; INV_LOADED=true;
   const host=document.getElementById('grid-flowinventory'); host.innerHTML=spinCard;
   try{ let rows;
-    if(LIVE){ const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,"?$select=bvr_name,bvr_environment,bvr_ownername,bvr_ownertype,bvr_state,bvr_actioncount,bvr_source,bvr_flowid&$orderby=bvr_name asc&$top=500");
+    if(LIVE){ const envF = ENV ? `&$filter=bvr_environment eq '${odataEsc(ENV)}'` : '';
+      const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,`?$select=bvr_name,bvr_environment,bvr_ownername,bvr_ownertype,bvr_state,bvr_actioncount,bvr_source,bvr_flowid${envF}&$orderby=bvr_name asc&$top=500`);
       rows=r.entities.map(e=>({ name:e.bvr_name, env:e.bvr_environment||'', owner:e.bvr_ownername||'', otype:fmt(e,'bvr_ownertype')||'', state:fmt(e,'bvr_state')||'', actions:e.bvr_actioncount||0, src:fmt(e,'bvr_source')||'', _flow:e.bvr_flowid })); }
-    else rows=DEMO_INVENTORY.slice();
+    else rows=DEMO_INVENTORY.filter(r=>!ENV||r.env===ENV);
     dgrid('grid-flowinventory',{ title:'Flow Inventory', entity:CONFIG.entities.inventory, link:true, sub:'discovered cloud flows · click to open review',
       columns:[{key:'name',label:'Name'},{key:'env',label:'Environment'},{key:'owner',label:'Owner',render:rOwnerS},{key:'otype',label:'Owner type'},{key:'state',label:'State',render:rStateS},{key:'actions',label:'Actions'},{key:'src',label:'Source'}], rows });
   }catch(err){ INV_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
@@ -1045,9 +1180,9 @@ async function loadFlowReviews(){ if(FR_LOADED) return; FR_LOADED=true;
   const host=document.getElementById('grid-flowreviews'); host.innerHTML=spinCard;
   try{ let rows;
     if(LIVE){ const runs=await DS.recentRuns(); if(!runs.length){ dgrid('grid-flowreviews',{title:'Flow Reviews',entity:CONFIG.entities.flowreview,rows:[],empty:'No completed run yet.'}); return; }
-      const fr=await DS.flowReviews(runs[0].id);
+      const fr=(await DS.flowReviews(runs[0].id)).filter(f=>!ENV||f.environment===ENV);
       rows=fr.map(f=>({ flow:f.name, env:f.environment, score:f.score, status:f.score>=85?'Pass':f.score>=70?'Warning':'Fail', p:f.passed, w:f.warnings, f:f.failed, _id:f.id })); }
-    else rows=DEMO_FLOWS.map(f=>({ flow:f.name, env:f.environment, score:f.score, status:f.score>=85?'Pass':f.score>=70?'Warning':'Fail', p:f.passed, w:f.warnings, f:f.failed, _id:f.id }));
+    else rows=DEMO_FLOWS.filter(f=>!ENV||f.environment===ENV).map(f=>({ flow:f.name, env:f.environment, score:f.score, status:f.score>=85?'Pass':f.score>=70?'Warning':'Fail', p:f.passed, w:f.warnings, f:f.failed, _id:f.id }));
     dgrid('grid-flowreviews',{ title:'Flow Reviews', entity:CONFIG.entities.flowreview, link:true, sub:'latest run · click to open the review',
       columns:[{key:'flow',label:'Flow'},{key:'env',label:'Environment'},{key:'score',label:'Score',render:rScoreS},{key:'status',label:'Status',render:rChipS},{key:'p',label:'Passed'},{key:'w',label:'Warnings'},{key:'f',label:'Failed'}], rows });
   }catch(err){ FR_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
@@ -1056,10 +1191,11 @@ async function loadFindings(){ if(FIND_LOADED) return; FIND_LOADED=true;
   const host=document.getElementById('grid-findings'); host.innerHTML=spinCard;
   try{ let rows;
     if(LIVE){ const runs=await DS.recentRuns(); if(!runs.length){ dgrid('grid-findings',{title:'Findings',entity:CONFIG.entities.finding,rows:[],empty:'No completed run yet.'}); return; }
-      const fx=`<fetch top='300'><entity name='bvr_reviewfinding'><attribute name='bvr_rulecode'/><attribute name='bvr_status'/><attribute name='bvr_severity'/><attribute name='bvr_category'/><attribute name='bvr_aigenerated'/><order attribute='bvr_severity' descending='true'/><link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid' alias='fr'><attribute name='bvr_name'/><attribute name='bvr_flowreviewid'/><filter><condition attribute='bvr_runid' operator='eq' value='${runs[0].id}'/></filter></link-entity></entity></fetch>`;
+      const fx=`<fetch top='300'><entity name='bvr_reviewfinding'><attribute name='bvr_rulecode'/><attribute name='bvr_status'/><attribute name='bvr_severity'/><attribute name='bvr_category'/><attribute name='bvr_aigenerated'/><order attribute='bvr_severity' descending='true'/><link-entity name='bvr_flowreview' from='bvr_flowreviewid' to='bvr_flowreviewid' alias='fr'><attribute name='bvr_name'/><attribute name='bvr_flowreviewid'/><filter><condition attribute='bvr_runid' operator='eq' value='${runs[0].id}'/></filter>${envFetchLink()}</link-entity></entity></fetch>`;
       const r=await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.finding,'?fetchXml='+encodeURIComponent(fx));
       rows=r.entities.map(e=>({ flow:e['fr.bvr_name']||'', rule:e.bvr_rulecode, status:String(fmt(e,'bvr_status')||'').toLowerCase(), sev:String(fmt(e,'bvr_severity')||'info').toLowerCase(), cat:fmt(e,'bvr_category')||'', ai:!!e.bvr_aigenerated, _id:e['fr.bvr_flowreviewid'] })); }
-    else rows=DEMO_FINDINGS.slice();
+    else { const envByFlow={}; DEMO_FLOWS.forEach(f=>{ envByFlow[f.name]=f.environment; });
+      rows=DEMO_FINDINGS.filter(x=>!ENV||envByFlow[x.flow]===ENV); }
     dgrid('grid-findings',{ title:'Findings', entity:CONFIG.entities.finding, sub:'latest run · click a row to open the flow review',
       columns:[{key:'flow',label:'Flow',render:(v)=>`<span class="dg-link">${esc(v)}</span>`},{key:'rule',label:'Rule',render:v=>`<span class="mono" style="font-size:11.5px">${esc(v)}</span>`},{key:'status',label:'Status',render:rChipS},{key:'sev',label:'Severity',render:rSevS},{key:'cat',label:'Category'},{key:'ai',label:'AI',render:rAiS}], rows });
   }catch(err){ FIND_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
@@ -1104,7 +1240,10 @@ document.addEventListener('click', async e=>{
     catch(err){ toast('Could not open: '+(err.message||err),'err'); } }
 });
 
-const SECTION_LOADERS = { std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, standards:loadStandards, schedule:loadSchedule };
+const SECTION_LOADERS = { dash:loadDashboard, std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, standards:loadStandards, schedule:loadSchedule };
+function resetSectionData(){ DASH_LOADED=INV_LOADED=RUNS_LOADED=FR_LOADED=FIND_LOADED=STDS_LOADED=SCH_LOADED=false; }
+function currentView(){ const el=document.querySelector('.view.active'); return el? el.id.replace('view-','') : 'dash'; }
+function reloadForEnv(){ resetSectionData(); (SECTION_LOADERS[currentView()]||loadDashboard)(); }
 function switchView(v){
   document.querySelectorAll('.segmented button').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
@@ -1140,6 +1279,12 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
     const m=DASH_FLOWS.filter(f=>`${f.name} ${f.owner} ${f.environment}`.toLowerCase().includes(q));
     renderFlowRows(m.slice(0,25));
   });
+  // global environment filter — populate options + re-render on change
+  const envSel=document.getElementById('envFilter');
+  if(envSel){
+    try{ (await DS.environments()).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; envSel.appendChild(o); }); }catch(_){}
+    envSel.addEventListener('change', ()=>{ ENV=envSel.value; reloadForEnv(); });
+  }
   // site-map / deep-link routing.
   // A model-driven app subarea passes its configured value as ?data=<page>
   // (with passParams enabled), so each menu item opens the right section here.

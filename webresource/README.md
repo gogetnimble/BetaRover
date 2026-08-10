@@ -20,6 +20,28 @@ Clicking a flow on the dashboard opens its review. **Run review now** creates a
 [`flows/on-demand-review`](../flows/on-demand-review/README.md) — then polls until
 it completes and refreshes.
 
+### Dashboard stats
+
+The dashboard is the app's high-level stat board (a model-driven app can't chart
+web-resource data natively, so the web resource renders its own):
+
+- **Headline tiles** — Average score (Δ vs previous run), Compliant flows,
+  Open findings (Δ), Error-severity gaps.
+- **Inventory + test tiles** — Flows discovered (activated vs draft/suspended),
+  Unit-test pass rate (`bvr_lasttestpassedon` / `bvr_testcasecount`), Last
+  unit-test pass, and an average-score **trend sparkline** over recent runs.
+- **By environment** — per-environment rollup of flows, average score, and
+  findings, from `bvr_flowinventory.bvr_environment`.
+
+### Global environment filter
+
+The header carries an **environment** dropdown (populated from distinct
+`bvr_environment` values). Selecting one scopes the dashboard tiles, the
+per-environment highlight, the flow list, and the Flow Inventory / Flow Reviews /
+Findings grids to that environment (server-side via `$filter` / a FetchXML
+`bvr_flowinventory` link; the severity donut and rule bars are scoped too).
+"All environments" clears it.
+
 ## Live vs Preview
 
 `getXrm()` looks for `Xrm.WebApi` on the window or its parent.

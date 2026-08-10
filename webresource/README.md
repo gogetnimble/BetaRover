@@ -51,7 +51,11 @@ environment-filter aware):
   **last static review** and **last unit-test pass** dates, test-case count, and
   a Validated / Not passed / No tests badge (from `bvr_flowinventory`).
 - **Test Cases** (`?data=testcases`) — the mocked unit tests (`bvr_flowtestcase`),
-  each with its flow, enabled state, and what it pins/asserts.
+  each with its flow, enabled state, and what it pins/asserts. A **New test case**
+  button (on both Test Coverage and Test Cases) opens a quick-create that writes a
+  `bvr_flowtestcase` row: name, flow (picked from `bvr_flowinventory`), enabled,
+  description, and a `bvr_casejson` body pre-filled with a
+  `{ trigger, mocks, variables, asserts }` template (validated as JSON on save).
 - **Test Runs** (`?data=testruns`) — mock-execution results (`bvr_flowtestrun`):
   status, passed/failed counts, duration, and when it ran.
 

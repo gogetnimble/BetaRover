@@ -500,6 +500,36 @@
   </div>
 </div>
 
+<!-- ===== ADD-TEST-CASE MODAL (Quick Create for bvr_flowtestcase) ===== -->
+<div class="modal-backdrop" id="tcModal" hidden>
+  <div class="modal card" role="dialog" aria-modal="true" aria-labelledby="tcTitle">
+    <div class="modal-h">
+      <div><div class="eyebrow" style="margin-bottom:4px">Quick create · bvr_flowtestcase</div><h3 id="tcTitle">Add test case</h3></div>
+      <button class="iconbtn" id="tcClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field full"><label>Test case name</label><input class="input" id="t-name" placeholder="e.g. Catch path · Dataverse 500"></div>
+      <div class="form-grid">
+        <div class="field"><label>Flow <span class="hint">bvr_flowinventory</span></label>
+          <select class="select" id="t-flow"><option value="">Loading flows…</option></select>
+        </div>
+        <div class="field"><label>Enabled</label><button class="toggle" id="t-enabled" type="button" aria-label="enabled"></button></div>
+      </div>
+      <div class="field full"><label>What it pins / asserts <span class="hint">bvr_description</span></label>
+        <textarea class="ta" id="t-desc" placeholder="Plain-English summary of the mocked inputs and what the run should do."></textarea></div>
+      <div class="field full"><label>Case JSON <span class="hint">bvr_casejson — trigger, mocks, variables, asserts</span></label>
+        <textarea class="ta mono" id="t-json" spellcheck="false"></textarea>
+        <span class="err-msg" id="t-json-err">Case JSON must be valid JSON.</span>
+      </div>
+      <span class="err-msg" id="t-req-err">A test case name and a flow are both required.</span>
+    </div>
+    <div class="modal-f">
+      <span class="mono" style="font-size:11px;color:var(--faint)">writes a Flow Test Case row · run by the mock runner</span>
+      <span style="display:flex;gap:9px"><button class="btn ghost" id="tcCancel">Cancel</button><button class="btn primary" id="tcSave">Save test case</button></span>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <script>
@@ -645,6 +675,16 @@ const Live = {
     return r.entities.map(e=>{ const inv=e[nav]||{};
       return { name:e.bvr_name, flow:inv.bvr_name||'', env:inv.bvr_environment||'', status:String(fmt(e,'bvr_status')||'').toLowerCase(),
         passed:e.bvr_passed||0, failed:e.bvr_failed||0, ms:e.bvr_durationms||0, ranOn:e.bvr_ranon||null }; });
+  },
+  async flowsForPicker(){
+    const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory, "?$select=bvr_name,bvr_environment&$orderby=bvr_name asc&$top=1000");
+    return r.entities.map(e=>({ id:e.bvr_flowinventoryid, name:e.bvr_name, env:e.bvr_environment||'' }));
+  },
+  async createTestCase(t){
+    const rec = { bvr_name:t.name, bvr_enabled:t.on, bvr_description:t.desc, bvr_casejson:t.json };
+    rec[`${CONFIG.navProps.testToInventory}@odata.bind`] = `/bvr_flowinventories(${t.flowId})`;
+    const res = await XRM.WebApi.createRecord(CONFIG.entities.testcase, rec);
+    return res.id;
   },
   async flowReviews(runId){
     const nav = CONFIG.navProps.reviewToInventory;
@@ -803,6 +843,9 @@ const Demo = {
   async testCoverage(){ return DEMO_COVERAGE.filter(r=>!ENV||r.env===ENV); },
   async testCases(){ return DEMO_TESTCASES.filter(r=>!ENV||r.env===ENV); },
   async testRuns(){ return DEMO_TESTRUNS.filter(r=>!ENV||r.env===ENV); },
+  async flowsForPicker(){ return DEMO_INVENTORY.map(r=>({ id:r.name, name:r.name, env:r.env })); },
+  async createTestCase(t){ DEMO_TESTCASES.unshift({ name:t.name, flow:t.flowName, env:t.env, on:t.on, desc:t.desc });
+    const cov=DEMO_COVERAGE.find(c=>c.name===t.flowName); if(cov) cov.cases++; return 'tc'+Date.now(); },
   async flowReviews(){ return DEMO_FLOWS.slice(); },
   async severity(){ return { error:361, warning:554, info:289 }; },
   async ruleCompliance(){ return [
@@ -1131,6 +1174,52 @@ $('rmSave').addEventListener('click', async ()=>{
   finally{ saveBtn.disabled=false; saveBtn.textContent='Save & add to standard'; }
 });
 
+/* ============================ ADD-TEST-CASE MODAL ============================ */
+const tcModal=$('tcModal');
+let tcEnabled=true;
+const TC_JSON_TEMPLATE = `{
+  "trigger": { "outputs": {} },
+  "mocks": {},
+  "variables": {},
+  "asserts": [
+    { "type": "noFailures" }
+  ]
+}`;
+async function openTestCaseModal(){
+  const sel=$('t-flow'); sel.innerHTML='<option value="">Loading flows…</option>';
+  tcModal.hidden=false; $('t-name').focus();
+  try{
+    const flows=await DS.flowsForPicker();
+    sel.innerHTML = flows.length
+      ? '<option value="">Select a flow…</option>'+flows.map(f=>`<option value="${esc(f.id)}" data-name="${esc(f.name)}" data-env="${esc(f.env)}">${esc(f.name)}${f.env?' · '+esc(f.env):''}</option>`).join('')
+      : '<option value="">No flows in inventory yet</option>';
+  }catch(err){ sel.innerHTML='<option value="">Could not load flows</option>'; toast('Could not load flows: '+(err.message||err),'err'); }
+}
+function resetTcForm(){ ['t-name','t-desc'].forEach(id=>$(id).value=''); $('t-json').value=TC_JSON_TEMPLATE;
+  tcEnabled=true; $('t-enabled').classList.remove('off'); $('t-req-err').classList.remove('show'); $('t-json-err').classList.remove('show'); }
+$('t-enabled').addEventListener('click',()=>{ tcEnabled=!tcEnabled; $('t-enabled').classList.toggle('off',!tcEnabled); });
+$('tcClose').addEventListener('click',()=>tcModal.hidden=true);
+$('tcCancel').addEventListener('click',()=>tcModal.hidden=true);
+tcModal.addEventListener('click',e=>{ if(e.target===tcModal) tcModal.hidden=true; });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !tcModal.hidden) tcModal.hidden=true; });
+document.addEventListener('click',e=>{ if(e.target.closest('.js-new-testcase')){ resetTcForm(); openTestCaseModal(); } });
+$('tcSave').addEventListener('click', async ()=>{
+  const name=$('t-name').value.trim(); const sel=$('t-flow'); const opt=sel.options[sel.selectedIndex]; const flowId=sel.value;
+  $('t-req-err').classList.remove('show'); $('t-json-err').classList.remove('show');
+  if(!name||!flowId){ $('t-req-err').classList.add('show'); return; }
+  const json=$('t-json').value.trim()||'{}';
+  try{ JSON.parse(json); }catch(_){ $('t-json-err').classList.add('show'); return; }
+  const payload={ name, flowId, flowName:(opt&&opt.dataset.name)||'', env:(opt&&opt.dataset.env)||'', on:tcEnabled, desc:$('t-desc').value.trim(), json };
+  const btn=$('tcSave'); btn.disabled=true; btn.textContent='Saving…';
+  try{
+    await DS.createTestCase(payload);
+    tcModal.hidden=true; resetTcForm(); toast('Test case added.');
+    TCASE_LOADED=false; TCOV_LOADED=false;
+    const v=currentView(); if((v==='testcases'||v==='testcoverage') && SECTION_LOADERS[v]) SECTION_LOADERS[v]();
+  }catch(err){ console.error(err); toast('Could not create test case: '+(err.message||err),'err'); }
+  finally{ btn.disabled=false; btn.textContent='Save test case'; }
+});
+
 /* ============================ TABS / THEME / INIT ============================ */
 /* ===================== RAW-TABLE SECTIONS (grids) ===================== */
 function _chip(v){ const s=String(v||'').toLowerCase();
@@ -1148,6 +1237,7 @@ const rScoreS = v => { const g=gradeFor(v),c=scoreColor(v);
   return `<span class="statecell"><span class="grade ${g}" style="width:22px;height:22px;font-size:11px">${g}</span><span class="mono" style="font-weight:700;color:${c}">${v}</span></span>`; };
 const rOwnerS = (v,r)=> `<span class="mono" style="font-size:12px;color:${String(r.otype||'').toLowerCase()==='user'?'var(--bad)':'var(--muted)'}">${esc(v||'—')}</span>`;
 const rAiS = v => v ? '<span class="chip ai">AI</span>' : '<span style="color:var(--faint)">—</span>';
+const newTestCaseBtn = `<button class="btn primary js-new-testcase" type="button" style="flex:none"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12"/></svg>New test case</button>`;
 
 function dgrid(id, cfg){
   const cols = cfg.columns;
@@ -1156,7 +1246,8 @@ function dgrid(id, cfg){
   const body = cfg.rows.length ? cfg.rows.map(r=>`<tr${rowAttr(r)}>${cols.map((c,i)=>`<td>${c.render?c.render(r[c.key],r):(i===0&&cfg.link?`<span class="dg-link">${esc(r[c.key])}</span>`:esc(r[c.key]))}</td>`).join('')}</tr>`).join('')
     : `<tr><td colspan="${cols.length}"><div class="empty" style="padding:26px 18px">${esc(cfg.empty||'No records.')}</div></td></tr>`;
   document.getElementById(id).innerHTML = `
-    <div class="gv-title">${esc(cfg.title)}</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div class="gv-title">${esc(cfg.title)}</div>${cfg.action||''}</div>
     <div class="gv-sub">${esc(cfg.sub||'')} <span class="mono" style="font-size:11px;color:var(--faint)">${esc(cfg.entity||'')}</span></div>
     <div class="dg-card"><div style="overflow-x:auto"><table class="dgt"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
       <div class="dg-foot"><span>${cfg.rows.length} record${cfg.rows.length===1?'':'s'}</span></div></div>`;
@@ -1274,7 +1365,7 @@ async function loadTestCoverage(){ if(TCOV_LOADED) return; TCOV_LOADED=true;
       reviewed:dayDate(r.reviewed), tested:dayDate(r.testPass),
       _val:(r.cases>0&&r.testPass)?'Validated':(r.cases>0?'Not passed':'No tests') }));
     const rVal=v=>{ const s=String(v).toLowerCase(); const c=s==='validated'?'pass':(s==='no tests'?'na':'fail'); return `<span class="chip ${c}">${esc(v)}</span>`; };
-    dgrid('grid-testcoverage',{ title:'Test Coverage', entity:CONFIG.entities.inventory, sub:'flows by environment · last static review vs last unit-test pass',
+    dgrid('grid-testcoverage',{ title:'Test Coverage', entity:CONFIG.entities.inventory, action:newTestCaseBtn, sub:'flows by environment · last static review vs last unit-test pass',
       columns:[{key:'name',label:'Flow'},{key:'env',label:'Environment'},{key:'state',label:'State',render:rStateS},{key:'cases',label:'Test cases'},{key:'reviewed',label:'Last reviewed'},{key:'tested',label:'Last test pass'},{key:'_val',label:'Validated',render:rVal}], rows });
   }catch(err){ TCOV_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
 }
@@ -1282,7 +1373,7 @@ async function loadTestCases(){ if(TCASE_LOADED) return; TCASE_LOADED=true;
   const host=document.getElementById('grid-testcases'); host.innerHTML=spinCard;
   try{ const rows=(await DS.testCases()).map(r=>({ name:r.name, flow:r.flow, env:r.env, on:r.on, desc:r.desc }));
     const rOn=v=>v?'<span class="chip pass">On</span>':'<span class="chip na">Off</span>';
-    dgrid('grid-testcases',{ title:'Test Cases', entity:CONFIG.entities.testcase, sub:'mocked unit tests · click nothing — edit in the table',
+    dgrid('grid-testcases',{ title:'Test Cases', entity:CONFIG.entities.testcase, action:newTestCaseBtn, sub:'mocked unit tests · add one with New test case',
       columns:[{key:'name',label:'Case'},{key:'flow',label:'Flow'},{key:'env',label:'Environment'},{key:'on',label:'Enabled',render:rOn},{key:'desc',label:'What it pins / asserts'}], rows });
   }catch(err){ TCASE_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
 }

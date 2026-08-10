@@ -1,0 +1,73 @@
+<style>
+:root{--bg:#f6f8fc;--panel:#fff;--border:#dce3ef;--text:#1a2233;--muted:#5a6478;--faint:#8a93a6;--accent:#7a120c}
+:root:not([data-theme=light]) @media (prefers-color-scheme:dark){}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0c101b;--panel:#151b2b;--border:#26304a;--text:#e7ecf5;--muted:#aab3c6;--faint:#7c8aa5;--accent:#ef6a4a}}
+[data-theme=dark]{--bg:#0c101b;--panel:#151b2b;--border:#26304a;--text:#e7ecf5;--muted:#aab3c6;--faint:#7c8aa5;--accent:#ef6a4a}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;padding:26px}
+h1{font-size:19px;margin:0 0 4px} .sub{color:var(--muted);font-size:13px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.card{display:flex;gap:13px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:13px}
+.ico{width:40px;height:40px;display:grid;place-items:center;color:var(--accent);flex:none;background:rgba(122,18,12,.06);border-radius:9px}
+.ico svg{width:24px;height:24px}
+.lbl{font-weight:700;font-size:13.5px} .fn{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint);margin-top:2px}
+.url{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted);margin-top:3px;word-break:break-all}
+.note{margin-top:22px;font-size:12.5px;color:var(--muted);line-height:1.6}
+code{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11.5px}
+</style>
+<h1>Ember — site map icons</h1>
+<div class="sub">12 theme-adaptive SVG icons (they inherit the menu text colour via <code>currentColor</code>). Add each as a Web Resource, then set it as the subarea's Icon.</div>
+<div class="grid"><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V11M10 21V5M15 21v-8M20 21V8"/></svg></div>
+      <div class="meta"><div class="lbl">Dashboard</div>
+        <div class="fn">ember-dashboard.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=dash</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1" fill="currentColor" stroke="none"/></svg></div>
+      <div class="meta"><div class="lbl">Flow Inventory</div>
+        <div class="fn">ember-flowinventory.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=flowinventory</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 8A8 8 0 0 0 6 6.3L4 8"/><path d="M4 4v4h4"/><path d="M4 16a8 8 0 0 0 14 1.7L20 16"/><path d="M20 20v-4h-4"/></svg></div>
+      <div class="meta"><div class="lbl">Review Runs</div>
+        <div class="fn">ember-reviewruns.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=reviewruns</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M9 14l2 2 4-4"/></svg></div>
+      <div class="meta"><div class="lbl">Flow Reviews</div>
+        <div class="fn">ember-flowreviews.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=flowreviews</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 3 20h18z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg></div>
+      <div class="meta"><div class="lbl">Findings</div>
+        <div class="fn">ember-findings.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=findings</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <div class="meta"><div class="lbl">Test Coverage</div>
+        <div class="fn">ember-testcoverage.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=testcoverage</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6L5.5 17a1.8 1.8 0 0 0 1.6 3h9.8a1.8 1.8 0 0 0 1.6-3L14 9V3"/><path d="M7.5 15h9"/></svg></div>
+      <div class="meta"><div class="lbl">Test Cases</div>
+        <div class="fn">ember-testcases.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=testcases</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.3l6 3.7-6 3.7z" fill="currentColor" stroke="none"/></svg></div>
+      <div class="meta"><div class="lbl">Test Runs</div>
+        <div class="fn">ember-testruns.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=testruns</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h11a1 1 0 0 1 1 1v15H7a2 2 0 0 1-2-2V5a1 1 0 0 1 1-1z"/><path d="M6 17h12"/><path d="M9 8h6"/></svg></div>
+      <div class="meta"><div class="lbl">Review Standards</div>
+        <div class="fn">ember-standards.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=standards</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M4 12h3M4 17h11"/><path d="M20 7h-3M20 12h-7M20 17h-1"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="17" r="2"/></svg></div>
+      <div class="meta"><div class="lbl">Review Rules</div>
+        <div class="fn">ember-rules.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=rules</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6"/><path d="M8 2v4M16 2v4M4 9h16"/><circle cx="17.5" cy="16.5" r="4.5"/><path d="M17.5 14.7v1.8l1.4 1"/></svg></div>
+      <div class="meta"><div class="lbl">Crawl Schedule</div>
+        <div class="fn">ember-schedule.svg</div>
+        <div class="url">/WebResources/bvr_flowreview_app.html?data=schedule</div></div></div><div class="card">
+      <div class="ico"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 2.6c.8 2.9-.5 4.8-2.1 6.6-1.5 1.8-3.3 3.4-3.3 6.4a5.8 5.8 0 0 0 11.6.2c0-2.3-1-4.1-2.2-5.6-.3 1.2-.9 2.2-2 2.7.9-3.3-.7-6.5-2-10.3z" fill="currentColor" stroke="none"/><path d="M9 15.6c-.1 2 1.2 3.5 3 3.8-1.1-1.1-1.5-2.4-1.1-3.8.3-1-.1-2.2-.8-3-.7.8-1.1 1.9-1.1 3z" fill="currentColor" stroke="none" opacity=".55"/></svg></div>
+      <div class="meta"><div class="lbl">(App icon — Ember flame)</div>
+        <div class="fn">ember-app.svg</div>
+        <div class="url">—</div></div></div></div>
+<div class="note">
+<b>To use in the model-driven app:</b><br>
+1. <b>Add each SVG as a Web Resource</b> — type <b>SVG (Vector format)</b>, e.g. name <code>bvr_ember-dashboard.svg</code>, upload the file.<br>
+2. In the app's <b>site map</b>, open each subarea → <b>Icon</b> → <b>Web resource</b> → pick the matching icon. Use <code>ember-app.svg</code> as the app's own icon.<br>
+3. <b>Publish.</b> The <code>currentColor</code> fill makes them adapt to light/dark and selection state automatically.
+</div>

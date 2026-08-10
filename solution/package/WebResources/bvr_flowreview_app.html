@@ -138,6 +138,12 @@
   .ucard .uc-foot{margin-top:11px;font-size:10px;color:var(--faint)}
 
   .wr-toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 0 16px}
+  .wr-toolbar .spacer{flex:1}
+  .envfilter{display:inline-flex; align-items:center; gap:8px; height:34px; padding:0 10px; background:var(--panel); border:1px solid var(--border-strong); border-radius:8px}
+  .envfilter>svg{width:14px;height:14px;color:var(--muted);flex:none}
+  .envfilter-k{font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--faint)}
+  .envfilter .env-select{height:26px; border:0; background:transparent; padding:0 4px; max-width:220px}
+  .envfilter .env-select:focus-visible{box-shadow:none; outline:2px solid var(--accent); outline-offset:1px}
   .segmented{display:inline-flex; background:var(--panel-2); border:1px solid var(--border); border-radius:9px; padding:3px}
   .segmented button{border:0; background:transparent; color:var(--muted); font-size:12.5px; font-weight:600; padding:6px 13px; border-radius:6px; display:flex; align-items:center; gap:7px}
   .segmented button.active{background:var(--panel); color:var(--text); box-shadow:var(--shadow)}
@@ -349,9 +355,6 @@
     <h1>Ember</h1>
     <span class="env" id="envPill">—</span>
     <span class="spacer"></span>
-    <select class="env-select" id="envFilter" aria-label="Filter by environment" title="Filter by environment">
-      <option value="">All environments</option>
-    </select>
     <div class="hsearch"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6"/><path d="m14 14 3 3"/></svg><input id="flowSearch" placeholder="Search flows, findings…" aria-label="Search flows and findings"></div>
     <button class="mini" id="themeBtn" title="Toggle light / dark">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 11a6 6 0 1 1-7-7 5 5 0 0 0 7 7Z"/></svg>Theme
@@ -363,10 +366,18 @@
     </div>
   </header>
 
-  <!-- In-page nav (mirrors the app site map). Hidden when embedded — the
-       model-driven app's native site map drives navigation via ?data=. -->
+  <!-- App-wide toolbar. The environment filter is global (scopes every section)
+       and always shown. The in-page tab group (#segNav) mirrors the site map and
+       is hidden when embedded — the model-driven app's native site map drives
+       navigation via ?data=. -->
   <div class="wr-toolbar" id="sectionNav">
-    <div class="segmented" role="tablist">
+    <label class="envfilter" title="Filter the whole app by flow environment">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 4h14l-5 6v5l-4 2v-7z"/></svg>
+      <span class="envfilter-k">Environment</span>
+      <select class="env-select" id="envFilter" aria-label="Filter by environment"><option value="">All environments</option></select>
+    </label>
+    <span class="spacer"></span>
+    <div class="segmented" role="tablist" id="segNav">
       <button class="active" data-view="dash" role="tab">Dashboard</button>
       <button data-view="flowinventory" role="tab">Flow Inventory</button>
       <button data-view="reviewruns" role="tab">Review Runs</button>
@@ -1899,7 +1910,9 @@ async function loadIdentity(){
   loadIdentity();   // WhoAmI + systemuser → richer avatar tooltip + profile popover
   // Embedded in the model-driven app, the native site map drives navigation, so
   // hide the in-page section nav. Standalone (preview) keeps it for browsing.
-  if(meta.live){ const nav=document.getElementById('sectionNav'); if(nav) nav.style.display='none'; }
+  // Embedded (Live): the native site map drives navigation, so hide the in-page
+  // tab group — but keep the toolbar so the global Environment filter stays visible.
+  if(meta.live){ const seg=document.getElementById('segNav'); if(seg) seg.style.display='none'; }
   await loadDashboard();
   const searchEl=document.getElementById('flowSearch');
   if(searchEl) searchEl.addEventListener('input', ()=>{

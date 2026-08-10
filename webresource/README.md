@@ -45,8 +45,11 @@ web-resource data natively, so the web resource renders its own):
 
 ### Global environment filter
 
-The header carries an **environment** dropdown (populated from distinct
-`bvr_environment` values). Selecting one scopes the dashboard tiles, the
+A global **Environment** dropdown sits in the app toolbar (populated from
+distinct `bvr_environment` values), always visible so it filters every section.
+The in-page tab group beside it mirrors the site map and is hidden when embedded
+(the model-driven app's native site map drives navigation), but the filter stays.
+Selecting an environment scopes the dashboard tiles, the
 per-environment highlight, the flow list, and the Flow Inventory / Flow Reviews /
 Findings grids to that environment (server-side via `$filter` / a FetchXML
 `bvr_flowinventory` link; the severity donut and rule bars are scoped too).

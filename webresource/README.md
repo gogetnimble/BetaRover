@@ -59,7 +59,15 @@ environment-filter aware):
 
 - **Test Coverage** (`?data=testcoverage`) — every flow by environment with its
   **last static review** and **last unit-test pass** dates, test-case count, and
-  a Validated / Not passed / No tests badge (from `bvr_flowinventory`).
+  a Validated / Not passed / No tests badge (from `bvr_flowinventory`). Each flow
+  with cases has a **Run tests** button that executes its enabled cases through
+  the in-browser **mock runner** (a faithful port of `engine/src/testing`,
+  guarded by `engine/test/testing/port-parity.test.ts`): it reads the flow's
+  definition from the `workflow` table's `clientdata`, interprets it against each
+  case's `{ trigger, mocks, variables, asserts }` — no live connectors called —
+  writes a `bvr_flowtestrun` result row, and stamps `bvr_lasttestpassedon` /
+  `bvr_testcasecount` on the flow so the dashboard tiles and Test Runs grid light
+  up. (Requires **Read** on the Process / `workflow` table for the definition.)
 - **Test Cases** (`?data=testcases`) — the mocked unit tests (`bvr_flowtestcase`),
   each with its flow, enabled state, and what it pins/asserts. A **New test case**
   button (on both Test Coverage and Test Cases) opens a quick-create that writes a

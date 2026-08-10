@@ -607,7 +607,8 @@ const CHOICES = {
   category:   { Naming:100000000, ErrorHandling:100000001, Logging:100000002, Configuration:100000003, Security:100000004, Email:100000005, General:100000006 },
   severity:   { info:100000000, warning:100000001, error:100000002, critical:100000003 },
   runStatus:  { Queued:100000000, Running:100000001, Completed:100000002, Failed:100000003 },
-  triggerSrc: { schedule:100000000, ondemand:100000001 }
+  triggerSrc: { schedule:100000000, ondemand:100000001 },
+  testStatus: { passed:100000000, failed:100000001, error:100000002 }
 };
 
 /* ============================ XRM / DATA LAYER ============================ */
@@ -660,6 +661,205 @@ function summariseInventory(rows){
   });
   return out;
 }
+
+/* ============================ MOCK-EXECUTION RUNNER ============================
+   Faithful browser port of engine/src/testing (expr.ts + runner.ts). Interprets a
+   flow's Workflow Definition Language against a { trigger, mocks, variables,
+   asserts } TestCase — no live connectors are called. Keep in sync with the TS. */
+const EmberRunner = (function(){
+  "use strict";
+  function emptyContext(){ return { trigger:{outputs:undefined,body:undefined}, outputs:{}, bodies:{}, variables:{}, results:{}, items:{} }; }
+  /* --- tokenizer --- */
+  function tokenize(src){
+    const toks=[]; let i=0; const n=src.length;
+    while(i<n){ const c=src.charAt(i);
+      if(c===' '||c==='\t'||c==='\n'||c==='\r'){ i++; continue; }
+      if(c==="'"){ let s=''; i++;
+        while(i<n){ const d=src.charAt(i);
+          if(d==="'"){ if(src.charAt(i+1)==="'"){ s+="'"; i+=2; continue; } i++; break; }
+          s+=d; i++; }
+        toks.push({t:'str',v:s}); continue; }
+      if(c>='0'&&c<='9'){ let num=''; while(i<n && /[0-9.]/.test(src.charAt(i))){ num+=src.charAt(i); i++; } toks.push({t:'num',v:num}); continue; }
+      if(/[A-Za-z_$]/.test(c)){ let id=''; while(i<n && /[A-Za-z0-9_$]/.test(src.charAt(i))){ id+=src.charAt(i); i++; } toks.push({t:'id',v:id}); continue; }
+      if(c==='?' && (src.charAt(i+1)==='['||src.charAt(i+1)==='.')){ toks.push({t:'punct',v:'?'+src.charAt(i+1)}); i+=2; continue; }
+      if('()[],.'.includes(c)){ toks.push({t:'punct',v:c}); i++; continue; }
+      throw new Error("Unexpected character '"+c+"' in expression");
+    }
+    return toks;
+  }
+  /* --- parser --- */
+  function parse(src){
+    const toks=tokenize(src); let p=0;
+    const peek=()=>toks[p]; const next=()=>toks[p++];
+    const expect=v=>{ const t=next(); if(!t||t.v!==v) throw new Error("Expected '"+v+"' in expression"); };
+    function parsePrimary(){
+      const t=next(); if(!t) throw new Error('Unexpected end of expression');
+      if(t.t==='str') return {k:'lit',value:t.v};
+      if(t.t==='num') return {k:'lit',value:Number(t.v)};
+      if(t.t==='id'){
+        if(t.v==='true') return {k:'lit',value:true};
+        if(t.v==='false') return {k:'lit',value:false};
+        if(t.v==='null') return {k:'lit',value:null};
+        expect('('); const args=[]; let pk=peek();
+        if(pk && pk.v!==')'){ args.push(parseExpr()); pk=peek(); while(pk && pk.v===','){ next(); args.push(parseExpr()); pk=peek(); } }
+        expect(')'); return {k:'call',name:t.v,args};
+      }
+      throw new Error("Unexpected token '"+t.v+"' in expression");
+    }
+    function parseExpr(){
+      let node=parsePrimary(); let pk=peek();
+      while(pk){ const v=pk.v;
+        if(v==='['||v==='?['){ const optional=v==='?['; next(); const key=parseExpr(); expect(']'); node={k:'index',target:node,key,optional}; }
+        else if(v==='.'||v==='?.'){ const optional=v==='?.'; next(); const id=next(); if(!id) throw new Error('Expected property name'); node={k:'prop',target:node,name:id.v,optional}; }
+        else break;
+        pk=peek();
+      }
+      return node;
+    }
+    const ast=parseExpr(); if(p!==toks.length) throw new Error('Trailing tokens in expression'); return ast;
+  }
+  /* --- evaluation --- */
+  const deepEqual=(a,b)=>{ if(a===b) return true; if(typeof a!==typeof b) return false; if(a&&b&&typeof a==='object') return JSON.stringify(a)===JSON.stringify(b); return false; };
+  const toStr=v=>(v===null||v===undefined?'':typeof v==='object'?JSON.stringify(v):String(v));
+  const toNum=v=>(typeof v==='number'?v:Number(v));
+  const isEmpty=v=> v===null||v===undefined||v===''||(Array.isArray(v)&&v.length===0)||(typeof v==='object'&&Object.keys(v).length===0);
+  function toBool(v){ if(typeof v==='boolean') return v; if(typeof v==='string') return v.toLowerCase()==='true'; return !!v; }
+  const FUNCTIONS={
+    variables:(c,a)=>c.variables[String(a[0])], outputs:(c,a)=>c.outputs[String(a[0])], body:(c,a)=>c.bodies[String(a[0])],
+    triggeroutputs:c=>c.trigger.outputs, triggerbody:c=>c.trigger.body, trigger:c=>({outputs:c.trigger.outputs}),
+    item:c=>c.currentItem, items:(c,a)=>c.items[String(a[0])], result:(c,a)=>c.results[String(a[0])],
+    parameters:(c,a)=>(c.parameters?c.parameters[String(a[0])]:undefined),
+    actions:(c,a)=>({outputs:c.outputs[String(a[0])],body:c.bodies[String(a[0])]}),
+    string:(_c,a)=>toStr(a[0]), int:(_c,a)=>Math.trunc(toNum(a[0])), float:(_c,a)=>toNum(a[0]), bool:(_c,a)=>toBool(a[0]),
+    json:(_c,a)=>(typeof a[0]==='string'?JSON.parse(a[0]):a[0]), array:(_c,a)=>(Array.isArray(a[0])?a[0]:[a[0]]), createarray:(_c,a)=>a.slice(),
+    if:(_c,a)=>(toBool(a[0])?a[1]:a[2]), equals:(_c,a)=>deepEqual(a[0],a[1]), not:(_c,a)=>!toBool(a[0]), and:(_c,a)=>a.every(toBool), or:(_c,a)=>a.some(toBool),
+    greater:(_c,a)=>toNum(a[0])>toNum(a[1]), greaterorequals:(_c,a)=>toNum(a[0])>=toNum(a[1]), less:(_c,a)=>toNum(a[0])<toNum(a[1]), lessorequals:(_c,a)=>toNum(a[0])<=toNum(a[1]),
+    coalesce:(_c,a)=>a.find(x=>x!==null&&x!==undefined), empty:(_c,a)=>isEmpty(a[0]),
+    concat:(_c,a)=>a.map(toStr).join(''), tolower:(_c,a)=>toStr(a[0]).toLowerCase(), toupper:(_c,a)=>toStr(a[0]).toUpperCase(), trim:(_c,a)=>toStr(a[0]).trim(),
+    replace:(_c,a)=>toStr(a[0]).split(toStr(a[1])).join(toStr(a[2])), substring:(_c,a)=>toStr(a[0]).substr(toNum(a[1]), a[2]===undefined?undefined:toNum(a[2])),
+    startswith:(_c,a)=>toStr(a[0]).startsWith(toStr(a[1])), endswith:(_c,a)=>toStr(a[0]).endsWith(toStr(a[1])), indexof:(_c,a)=>toStr(a[0]).indexOf(toStr(a[1])),
+    guid:()=>'00000000-0000-0000-0000-000000000000',
+    length:(_c,a)=>(Array.isArray(a[0])?a[0].length:toStr(a[0]).length), first:(_c,a)=>(Array.isArray(a[0])?a[0][0]:toStr(a[0])[0]), last:(_c,a)=>(Array.isArray(a[0])?a[0][a[0].length-1]:toStr(a[0]).slice(-1)),
+    contains:(_c,a)=>{ const hay=a[0]; if(Array.isArray(hay)) return hay.some(x=>deepEqual(x,a[1])); if(hay&&typeof hay==='object') return Object.prototype.hasOwnProperty.call(hay,String(a[1])); return toStr(hay).includes(toStr(a[1])); },
+    add:(_c,a)=>toNum(a[0])+toNum(a[1]), sub:(_c,a)=>toNum(a[0])-toNum(a[1]), mul:(_c,a)=>toNum(a[0])*toNum(a[1]), div:(_c,a)=>toNum(a[0])/toNum(a[1]), mod:(_c,a)=>toNum(a[0])%toNum(a[1]),
+    max:(_c,a)=>Math.max.apply(null,a.map(toNum)), min:(_c,a)=>Math.min.apply(null,a.map(toNum)), utcnow:()=>'2020-01-01T00:00:00Z',
+  };
+  function evalAst(ast,ctx){
+    switch(ast.k){
+      case 'lit': return ast.value;
+      case 'call': { const fn=FUNCTIONS[ast.name.toLowerCase()]; if(!fn) throw new Error("Unsupported function '"+ast.name+"()'"); return fn(ctx, ast.args.map(a=>evalAst(a,ctx))); }
+      case 'index': { const target=evalAst(ast.target,ctx); if(target===null||target===undefined) return undefined; const key=evalAst(ast.key,ctx); return target[key]; }
+      case 'prop': { const target=evalAst(ast.target,ctx); if(target===null||target===undefined) return undefined; return target[ast.name]; }
+    }
+  }
+  function evaluateExpression(expr,ctx){ return evalAst(parse(expr),ctx); }
+  function resolveValue(value,ctx){
+    if(Array.isArray(value)) return value.map(v=>resolveValue(v,ctx));
+    if(value&&typeof value==='object'){ const out={}; for(const k in value) out[k]=resolveValue(value[k],ctx); return out; }
+    if(typeof value!=='string') return value;
+    const s=value;
+    if(s.startsWith('@@')) return s.slice(1);
+    if(s.startsWith('@')&&!s.startsWith('@{')) return evaluateExpression(s.slice(1),ctx);
+    if(!s.includes('@{')) return s;
+    let out=''; let i=0;
+    while(i<s.length){
+      if(s[i]==='@'&&s[i+1]==='@'){ out+='@'; i+=2; continue; }
+      if(s[i]==='@'&&s[i+1]==='{'){ let depth=1,j=i+2,expr=''; while(j<s.length&&depth>0){ if(s[j]==='{')depth++; else if(s[j]==='}'){ depth--; if(depth===0)break; } expr+=s[j++]; } out+=toStr(evaluateExpression(expr,ctx)); i=j+1; continue; }
+      out+=s[i++];
+    }
+    return out;
+  }
+  /* --- runner --- */
+  const asRecord=v=>(v&&typeof v==='object'&&!Array.isArray(v)?v:{});
+  const asStrArr=v=>(Array.isArray(v)?v.map(String):[]);
+  const asArray=v=>(Array.isArray(v)?v:v==null?[]:[v]);
+  const rNum=v=>(typeof v==='number'?v:Number(v));
+  const EXTERNAL_TYPES=new Set(['openapiconnection','openapiconnectionwebhook','openapiconnectionnotification','apiconnection','apiconnectionwebhook','http','https','workflow','function','sendemail','sendemailv2','response']);
+  function defaultForType(t){ switch(String(t).toLowerCase()){ case 'array': return []; case 'object': return {}; case 'integer': case 'float': return 0; case 'boolean': return false; default: return ''; } }
+  function setOutput(name,outputs,state){ state.ctx.outputs[name]=outputs; state.ctx.bodies[name]=(outputs&&typeof outputs==='object'&&'body' in outputs)?outputs.body:outputs; }
+  function pushTrace(state,t){ state.trace.push(t); }
+  function compare(op,a,b){ switch(op){
+    case 'equals': return JSON.stringify(a)===JSON.stringify(b);
+    case 'notequals': return JSON.stringify(a)!==JSON.stringify(b);
+    case 'greater': return rNum(a)>rNum(b); case 'greaterorequals': return rNum(a)>=rNum(b);
+    case 'less': return rNum(a)<rNum(b); case 'lessorequals': return rNum(a)<=rNum(b);
+    case 'contains': return Array.isArray(a)?a.some(x=>JSON.stringify(x)===JSON.stringify(b)):String(a).includes(String(b));
+    case 'startswith': return String(a).startsWith(String(b)); case 'endswith': return String(a).endsWith(String(b));
+    default: return false; } }
+  function evalCondition(expr,ctx){
+    if(typeof expr==='string') return toBool(resolveValue(expr,ctx));
+    const obj=asRecord(expr); const key=Object.keys(obj)[0]; if(!key) return false;
+    const raw=obj[key]; const list=Array.isArray(raw)?raw:[raw];
+    switch(key){ case 'and': return list.every(e=>evalCondition(e,ctx)); case 'or': return list.some(e=>evalCondition(e,ctx)); case 'not': return !evalCondition(list[0],ctx);
+      default: { const a=resolveValue(list[0],ctx); const b=resolveValue(list[1],ctx); return compare(key,a,b); } }
+  }
+  function markSkipped(action,state){
+    const nested=[action.actions, asRecord(action.else).actions, asRecord(action.default).actions];
+    for(const c of Object.values(asRecord(action.cases))) nested.push(asRecord(c).actions);
+    for(const nn of nested){ for(const [name,raw] of Object.entries(asRecord(nn))){ state.statuses[name]='Skipped'; pushTrace(state,{name,type:String(asRecord(raw).type||'Unknown'),status:'Skipped'}); markSkipped(asRecord(raw),state); } }
+  }
+  function runScope(actionsMap,state){
+    const entries=Object.entries(actionsMap); const local={}; const done=new Set(); const children=[]; let progress=true;
+    while(done.size<entries.length && progress){ progress=false;
+      for(const [name,raw] of entries){ if(done.has(name)) continue;
+        const action=asRecord(raw); const runAfter=asRecord(action.runAfter); const deps=Object.keys(runAfter);
+        if(!deps.every(d=>done.has(d))) continue;
+        let status; const gated=deps.some(d=>!asStrArr(runAfter[d]).includes(local[d]||'Skipped'));
+        if(state.terminated||gated){ status='Skipped'; pushTrace(state,{name,type:String(action.type||'Unknown'),status}); markSkipped(action,state); }
+        else { status=executeAction(name,action,state); }
+        local[name]=status; state.statuses[name]=status; done.add(name); children.push({name,status,outputs:state.ctx.outputs[name]}); progress=true;
+      }
+    }
+    const anyFailed=entries.some(([n])=>local[n]==='Failed'||local[n]==='TimedOut');
+    return { status: anyFailed?'Failed':'Succeeded', children };
+  }
+  function executeAction(name,action,state){
+    const type=String(action.type||'Unknown').toLowerCase(); const mock=state.mocks[name];
+    if(mock){ const status=mock.status||(mock.error?'Failed':'Succeeded'); setOutput(name,mock.outputs,state); pushTrace(state,{name,type:String(action.type),status,output:mock.outputs,mocked:true,note:mock.error}); return status; }
+    switch(type){
+      case 'compose': { const out=resolveValue(action.inputs,state.ctx); setOutput(name,out,state); pushTrace(state,{name,type:String(action.type),status:'Succeeded',output:out}); return 'Succeeded'; }
+      case 'initializevariable': { for(const v of asArray(asRecord(action.inputs).variables)){ const vv=asRecord(v); state.ctx.variables[String(vv.name)]=vv.value===undefined?defaultForType(vv.type):resolveValue(vv.value,state.ctx); } pushTrace(state,{name,type:String(action.type),status:'Succeeded'}); return 'Succeeded'; }
+      case 'setvariable': { const inp=asRecord(action.inputs); state.ctx.variables[String(inp.name)]=resolveValue(inp.value,state.ctx); pushTrace(state,{name,type:String(action.type),status:'Succeeded'}); return 'Succeeded'; }
+      case 'incrementvariable': case 'decrementvariable': { const inp=asRecord(action.inputs); const cur=rNum(state.ctx.variables[String(inp.name)]||0); const by=rNum(resolveValue(inp.value===undefined?1:inp.value,state.ctx)); state.ctx.variables[String(inp.name)]=type==='incrementvariable'?cur+by:cur-by; pushTrace(state,{name,type:String(action.type),status:'Succeeded'}); return 'Succeeded'; }
+      case 'appendtoarrayvariable': case 'appendtostringvariable': { const inp=asRecord(action.inputs); const key=String(inp.name); const val=resolveValue(inp.value,state.ctx);
+        if(type==='appendtoarrayvariable'){ const arr=Array.isArray(state.ctx.variables[key])?state.ctx.variables[key]:[]; arr.push(val); state.ctx.variables[key]=arr; }
+        else { state.ctx.variables[key]=String(state.ctx.variables[key]==null?'':state.ctx.variables[key])+String(val); }
+        pushTrace(state,{name,type:String(action.type),status:'Succeeded'}); return 'Succeeded'; }
+      case 'scope': { const outcome=runScope(asRecord(action.actions),state); state.ctx.results[name]=outcome.children.map(c=>({name:c.name,status:c.status,outputs:c.outputs})); pushTrace(state,{name,type:String(action.type),status:outcome.status}); return outcome.status; }
+      case 'if': { const yes=evalCondition(action.expression,state.ctx); const branch=yes?'yes':'no'; state.branches[name]=branch; const body=yes?asRecord(action.actions):asRecord(asRecord(action.else).actions); pushTrace(state,{name,type:String(action.type),status:'Succeeded',branch}); const outcome=runScope(body,state); state.statuses[name]=outcome.status; return outcome.status; }
+      case 'foreach': { const arr=resolveValue(action.foreach,state.ctx); const items=Array.isArray(arr)?arr:[]; let status='Succeeded'; for(const it of items){ state.ctx.currentItem=it; state.ctx.items[name]=it; const outcome=runScope(asRecord(action.actions),state); if(outcome.status==='Failed') status='Failed'; } pushTrace(state,{name,type:String(action.type),status}); return status; }
+      case 'switch': { const val=resolveValue(action.expression,state.ctx); const cases=asRecord(action.cases); let branch=asRecord(asRecord(action.default).actions); for(const c of Object.values(cases)){ const cr=asRecord(c); if(String(resolveValue(cr.case,state.ctx))===String(val)){ branch=asRecord(cr.actions); break; } } pushTrace(state,{name,type:String(action.type),status:'Succeeded'}); return runScope(branch,state).status; }
+      case 'terminate': { const runStatus=String(asRecord(action.inputs).runStatus||'Cancelled'); const status=runStatus==='Failed'?'Failed':'Succeeded'; state.terminated={status}; pushTrace(state,{name,type:String(action.type),status}); return status; }
+      default: { if(EXTERNAL_TYPES.has(type)){ state.unmocked.add(name); setOutput(name,{},state); pushTrace(state,{name,type:String(action.type),status:'Succeeded',output:{},note:'external action assumed Succeeded — provide a mock for real coverage'}); return 'Succeeded'; }
+        pushTrace(state,{name,type:String(action.type),status:'Succeeded'}); return 'Succeeded'; }
+    }
+  }
+  function evalAssertion(a,state){
+    const ran=n=>{ const s=state.statuses[n]; return s!==undefined&&s!=='Skipped'; };
+    const ok=(passed,message)=>({assertion:a,passed,message});
+    switch(a.type){
+      case 'ran': return ok(ran(a.action), ran(a.action)?a.action+' ran':a.action+' did not run (status '+(state.statuses[a.action]||'absent')+')');
+      case 'skipped': { const sk=(state.statuses[a.action]||'Skipped')==='Skipped'; return ok(sk, sk?a.action+' was skipped':a.action+' ran (status '+state.statuses[a.action]+')'); }
+      case 'status': { const s=state.statuses[a.action]; return ok(s===a.equals, a.action+' status = '+(s||'absent')+' (expected '+a.equals+')'); }
+      case 'branchTaken': { const b=state.branches[a.condition]; return ok(b===a.branch, a.condition+" took '"+(b||'none')+"' (expected '"+a.branch+"')"); }
+      case 'variableEquals': { const v=state.ctx.variables[a.name]; const p=JSON.stringify(v)===JSON.stringify(a.equals); return ok(p, "variables('"+a.name+"') = "+JSON.stringify(v)+' (expected '+JSON.stringify(a.equals)+')'); }
+      case 'outputEquals': case 'expression': { let val,err=''; try{ const e=a.expression.startsWith('@')?a.expression.slice(1):a.expression; val=evaluateExpression(e,state.ctx); }catch(x){ err=x.message; } if(err) return ok(false,"expression '"+a.expression+"' failed: "+err); const p=JSON.stringify(val)===JSON.stringify(a.equals); return ok(p, a.expression+' = '+JSON.stringify(val)+' (expected '+JSON.stringify(a.equals)+')'); }
+      case 'noFailures': { const failed=Object.entries(state.statuses).filter(([,s])=>s==='Failed'||s==='TimedOut').map(([n])=>n); return ok(failed.length===0, failed.length?'actions failed: '+failed.join(', '):'no actions failed'); }
+      default: return ok(false,'unknown assertion');
+    }
+  }
+  function runTestCase(model,testCase){
+    const def=asRecord(model&&model.raw); const ctx=emptyContext();
+    ctx.trigger.outputs=testCase.trigger&&testCase.trigger.outputs;
+    ctx.trigger.body=(testCase.trigger&&testCase.trigger.body!==undefined)?testCase.trigger.body:asRecord(testCase.trigger&&testCase.trigger.outputs).body;
+    if(testCase.variables) ctx.variables=Object.assign({},testCase.variables);
+    const state={ctx,trace:[],statuses:{},branches:{},mocks:testCase.mocks||{},unmocked:new Set(),terminated:null};
+    runScope(asRecord(def.actions),state);
+    const assertions=(testCase.asserts||[]).map(a=>evalAssertion(a,state));
+    return { caseName:testCase.name, passed:assertions.every(x=>x.passed), assertions, trace:state.trace, unmockedExternal:[...state.unmocked] };
+  }
+  return { runTestCase, evaluateExpression, emptyContext };
+})();
 
 /* ---- LIVE data source (Dataverse Web API via Xrm.WebApi) ---- */
 const Live = {
@@ -727,9 +927,43 @@ const Live = {
   async testCoverage(){
     const envF = ENV ? `&$filter=bvr_environment eq '${odataEsc(ENV)}'` : '';
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.inventory,
-      `?$select=bvr_name,bvr_environment,bvr_state,bvr_testcasecount,bvr_lastreviewedon,bvr_lasttestpassedon${envF}&$orderby=bvr_name asc&$top=500`);
-    return r.entities.map(e=>({ name:e.bvr_name, env:e.bvr_environment||'', state:fmt(e,'bvr_state')||'',
+      `?$select=bvr_name,bvr_flowid,bvr_environment,bvr_state,bvr_testcasecount,bvr_lastreviewedon,bvr_lasttestpassedon${envF}&$orderby=bvr_name asc&$top=500`);
+    return r.entities.map(e=>({ id:e.bvr_flowinventoryid, flowId:e.bvr_flowid||'', name:e.bvr_name, env:e.bvr_environment||'', state:fmt(e,'bvr_state')||'',
       cases:e.bvr_testcasecount||0, reviewed:e.bvr_lastreviewedon||null, testPass:e.bvr_lasttestpassedon||null }));
+  },
+  async runTests(flow){
+    // 1) enabled test cases for this flow
+    const tc = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.testcase,
+      `?$select=bvr_name,bvr_casejson&$filter=_bvr_flowinventoryid_value eq ${flow.id} and bvr_enabled eq true&$top=500`);
+    const cases = tc.entities.map(e=>{ let c={}; try{ c=JSON.parse(e.bvr_casejson||'{}'); }catch(_){}
+      return Object.assign({ asserts:[] }, c, { name:e.bvr_name }); });
+    if(!cases.length) return { status:'error', passed:0, failed:0, durationMs:0, results:[], message:'No enabled test cases for this flow.' };
+    // 2) flow definition from the workflows table (clientdata → properties.definition)
+    let def;
+    try{
+      const wf = await XRM.WebApi.retrieveRecord('workflow', flow.flowId, '?$select=clientdata,name');
+      const parsed = JSON.parse(wf.clientdata||'{}');
+      def = (parsed.properties && parsed.properties.definition) || parsed.definition || parsed;
+    }catch(err){ return { status:'error', passed:0, failed:0, durationMs:0, results:[], message:'Could not load the flow definition (need read on the Process table): '+(err.message||err) }; }
+    // 3) run each case through the mock runner
+    const now=()=> (self.performance&&performance.now)?performance.now():Date.now();
+    const t0=now(); const results=[]; let threw=false;
+    for(const c of cases){ try{ results.push(EmberRunner.runTestCase({raw:def}, c)); }
+      catch(err){ threw=true; results.push({ caseName:c.name, passed:false, assertions:[{passed:false,message:'runner error: '+(err.message||err)}], trace:[], unmockedExternal:[] }); } }
+    const durationMs=Math.round(now()-t0);
+    const passed=results.filter(r=>r.passed).length; const failed=results.length-passed;
+    const status = threw ? 'error' : (failed===0 ? 'passed' : 'failed');
+    // 4) write the bvr_flowtestrun result row
+    const rec = { bvr_name:`Test run · ${flow.name} · ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
+      bvr_status:CHOICES.testStatus[status], bvr_passed:passed, bvr_failed:failed, bvr_durationms:durationMs,
+      bvr_ranon:new Date().toISOString(), bvr_resultjson:JSON.stringify(results).slice(0,100000) };
+    rec[`${CONFIG.navProps.testToInventory}@odata.bind`] = `/bvr_flowinventories(${flow.id})`;
+    try{ await XRM.WebApi.createRecord(CONFIG.entities.testrun, rec); }catch(_){}
+    // 5) stamp the flow inventory row
+    const patch = { bvr_testcasecount:cases.length };
+    if(status==='passed') patch.bvr_lasttestpassedon=new Date().toISOString();
+    try{ await XRM.WebApi.updateRecord(CONFIG.entities.inventory, flow.id, patch); }catch(_){}
+    return { status, passed, failed, durationMs, results };
   },
   async testCases(){
     const nav = CONFIG.navProps.testToInventory;
@@ -915,9 +1149,33 @@ const Demo = {
     if(ENV) rows = rows.filter(r=>r.env===ENV);
     return summariseInventory(rows);
   },
-  async testCoverage(){ return DEMO_COVERAGE.filter(r=>!ENV||r.env===ENV); },
+  async testCoverage(){ return DEMO_COVERAGE.filter(r=>!ENV||r.env===ENV).map(r=>Object.assign({id:r.name,flowId:r.name},r)); },
   async testCases(){ return DEMO_TESTCASES.filter(r=>!ENV||r.env===ENV); },
   async testRuns(){ return DEMO_TESTRUNS.filter(r=>!ENV||r.env===ENV); },
+  async runTests(flow){
+    // sample flow definition + cases, executed through the same runner as Live
+    const SAMPLE_FLOW={ actions:{
+      Init_count:{ type:'InitializeVariable', inputs:{ variables:[{name:'count',type:'integer',value:0}] }, runAfter:{} },
+      Increment_count:{ type:'IncrementVariable', inputs:{ name:'count', value:2 }, runAfter:{ Init_count:['Succeeded'] } },
+      Get_a_row:{ type:'OpenApiConnection', inputs:{}, runAfter:{ Increment_count:['Succeeded'] } },
+      Check_count:{ type:'If', expression:{ greater:["@variables('count')",1] },
+        actions:{ Compose_ok:{ type:'Compose', inputs:'ok', runAfter:{} } },
+        else:{ actions:{ Compose_low:{ type:'Compose', inputs:'low', runAfter:{} } } },
+        runAfter:{ Get_a_row:['Succeeded'] } } } };
+    const cases=[
+      { name:'Happy path · row found', mocks:{ Get_a_row:{ status:'Succeeded', outputs:{ body:{ id:1 } } } },
+        asserts:[ {type:'noFailures'}, {type:'variableEquals',name:'count',equals:2}, {type:'branchTaken',condition:'Check_count',branch:'yes'}, {type:'ran',action:'Compose_ok'} ] },
+      { name:'Detects a failed action', mocks:{ Get_a_row:{ status:'Failed', error:'429 throttled' } },
+        asserts:[ {type:'status',action:'Get_a_row',equals:'Failed'}, {type:'skipped',action:'Check_count'} ] },
+      { name:'Wrong expectation (should fail)', mocks:{ Get_a_row:{ status:'Succeeded', outputs:{} } },
+        asserts:[ {type:'variableEquals',name:'count',equals:5} ] },
+    ];
+    const t0=Date.now(); const results=cases.map(c=>EmberRunner.runTestCase({raw:SAMPLE_FLOW},c)); const durationMs=Math.max(1,Date.now()-t0);
+    const passed=results.filter(r=>r.passed).length; const failed=results.length-passed; const status=failed===0?'passed':'failed';
+    DEMO_TESTRUNS.unshift({ name:`Test run · ${flow.name}`, flow:flow.name, env:flow.env||'', status, passed, failed, ms:durationMs, ranOn:new Date().toISOString() });
+    const cov=DEMO_COVERAGE.find(c=>c.name===flow.name); if(cov){ cov.cases=cases.length; if(status==='passed') cov.testPass=new Date().toISOString(); }
+    return { status, passed, failed, durationMs, results };
+  },
   async flowsForPicker(){ return DEMO_INVENTORY.map(r=>({ id:r.name, name:r.name, env:r.env })); },
   async createTestCase(t){ DEMO_TESTCASES.unshift({ name:t.name, flow:t.flowName, env:t.env, on:t.on, desc:t.desc });
     const cov=DEMO_COVERAGE.find(c=>c.name===t.flowName); if(cov) cov.cases++; return 'tc'+Date.now(); },
@@ -1517,10 +1775,13 @@ async function loadTestCoverage(){ if(TCOV_LOADED) return; TCOV_LOADED=true;
   const host=document.getElementById('grid-testcoverage'); host.innerHTML=spinCard;
   try{ const rows=(await DS.testCoverage()).map(r=>({ name:r.name, env:r.env, state:r.state, cases:r.cases,
       reviewed:dayDate(r.reviewed), tested:dayDate(r.testPass),
-      _val:(r.cases>0&&r.testPass)?'Validated':(r.cases>0?'Not passed':'No tests') }));
+      _val:(r.cases>0&&r.testPass)?'Validated':(r.cases>0?'Not passed':'No tests'), _inv:r.id, _flow:r.flowId }));
     const rVal=v=>{ const s=String(v).toLowerCase(); const c=s==='validated'?'pass':(s==='no tests'?'na':'fail'); return `<span class="chip ${c}">${esc(v)}</span>`; };
+    const rRun=(_v,row)=> row.cases>0
+      ? `<button class="btn ghost sm js-run-tests" type="button" data-inv="${esc(row._inv)}" data-flow="${esc(row._flow)}" data-name="${esc(row.name)}" data-env="${esc(row.env)}">Run tests</button>`
+      : '<span style="color:var(--faint);font-size:11px">no cases</span>';
     dgrid('grid-testcoverage',{ title:'Test Coverage', entity:CONFIG.entities.inventory, action:newTestCaseBtn, sub:'flows by environment · last static review vs last unit-test pass',
-      columns:[{key:'name',label:'Flow'},{key:'env',label:'Environment'},{key:'state',label:'State',render:rStateS},{key:'cases',label:'Test cases'},{key:'reviewed',label:'Last reviewed'},{key:'tested',label:'Last test pass'},{key:'_val',label:'Validated',render:rVal}], rows });
+      columns:[{key:'name',label:'Flow'},{key:'env',label:'Environment'},{key:'state',label:'State',render:rStateS},{key:'cases',label:'Test cases'},{key:'reviewed',label:'Last reviewed'},{key:'tested',label:'Last test pass'},{key:'_val',label:'Validated',render:rVal},{key:'_run',label:'',render:rRun}], rows });
   }catch(err){ TCOV_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
 }
 async function loadTestCases(){ if(TCASE_LOADED) return; TCASE_LOADED=true;
@@ -1538,6 +1799,21 @@ async function loadTestRuns(){ if(TRUN_LOADED) return; TRUN_LOADED=true;
       columns:[{key:'name',label:'Run'},{key:'flow',label:'Flow'},{key:'env',label:'Environment'},{key:'status',label:'Status',render:rChipS},{key:'p',label:'Passed'},{key:'f',label:'Failed'},{key:'dur',label:'Duration'},{key:'ranOn',label:'Ran on'}], rows });
   }catch(err){ TRUN_LOADED=false; host.innerHTML='<div class="card empty">'+esc(err.message||err)+'</div>'; }
 }
+/* Run tests now — execute a flow's enabled cases through the mock runner. */
+document.addEventListener('click', async e=>{
+  const b=e.target.closest('.js-run-tests'); if(!b) return;
+  const flow={ id:b.dataset.inv, flowId:b.dataset.flow, name:b.dataset.name, env:b.dataset.env };
+  b.disabled=true; const prev=b.textContent; b.textContent='Running…';
+  try{
+    const res=await DS.runTests(flow);
+    if(res.status==='error'){ toast(res.message||'Test run could not complete.','err'); }
+    else { const total=res.passed+res.failed; toast(`${flow.name}: ${res.passed}/${total} passed in ${res.durationMs} ms`, res.status==='passed'?undefined:'err'); }
+    TCOV_LOADED=false; TRUN_LOADED=false; DASH_LOADED=false;        // refresh coverage, runs, and dashboard tiles
+    const v=currentView(); if(SECTION_LOADERS[v]) SECTION_LOADERS[v]();
+  }catch(err){ console.error(err); toast('Run failed: '+(err.message||err),'err'); }
+  finally{ b.disabled=false; b.textContent=prev; }
+});
+
 async function loadSchedule(){ if(SCH_LOADED) return; SCH_LOADED=true;
   let std=null; try{ std=await DS.activeStandard(); }catch(_){}
   const allf = std && std.reviewAllFlows;

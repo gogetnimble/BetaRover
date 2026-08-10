@@ -298,8 +298,9 @@ async function main() {
 async function seed() {
   console.log('\nSeeding standard + rules from ../seed/default-ruleset.json');
   const seedSpec = JSON.parse(await readFile(join(__dir, '..', 'seed', 'default-ruleset.json'), 'utf8'));
-  const CAT = { Naming: 1, ErrorHandling: 2, Logging: 3, Configuration: 4, Security: 5, Email: 6, General: 7 };
-  const SEV = { info: 1, warning: 2, error: 3, critical: 4 };
+  // Choice integers must match the global option sets created above (option-value-prefix range).
+  const CAT = { Naming: 100000000, ErrorHandling: 100000001, Logging: 100000002, Configuration: 100000003, Security: 100000004, Email: 100000005, General: 100000006 };
+  const SEV = { info: 100000000, warning: 100000001, error: 100000002, critical: 100000003 };
 
   // upsert standard by bvr_code (alternate key not defined, so filter-then-create)
   const existing = await api('GET', `bvr_reviewstandards?$select=bvr_reviewstandardid&$filter=bvr_code eq '${seedSpec.standard.bvr_code}'`);

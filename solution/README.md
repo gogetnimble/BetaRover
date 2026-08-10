@@ -6,7 +6,7 @@ Dataverse environment, in two pieces that reflect what each tool does best:
 | Piece | What it delivers | How |
 |-------|------------------|-----|
 | [`package/`](package) | Publisher, solution container (**Ember**), and the **web resource** | import the `.zip` |
-| [`provision/`](provision) | The **9 global choices** + **6 tables** (columns, lookups, alternate key) + optional seed data | run the Node script |
+| [`provision/`](provision) | The **10 global choices** + **8 tables** (columns, lookups, alternate key) + optional seed data | run the browser console **or** Node script |
 | [`app/`](app) | The **model-driven app site map** — every menu item opens the web resource at a `?data=` section | build in the maker portal |
 
 Choices and tables are provisioned by script rather than baked into the solution
@@ -29,7 +29,10 @@ zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
 #    (make.powerapps.com → Solutions → Import solution) or:
 #    pac solution import --path ../Ember_1_0_0_0.zip
 
-# 3. Provision the six tables (+ seed the default standard/rules)
+# 3. Provision the tables (+ seed the default standard/rules).
+#    Easiest: open your org (https://yourorg.crm.dynamics.com), F12 → Console,
+#    optionally run  window.EMBER_SEED = true;  then paste provision/provision-console.js.
+#    Or, from a terminal with a token:
 cd ../provision
 export DATAVERSE_URL="https://yourorg.crm.dynamics.com"
 export DATAVERSE_TOKEN="$(az account get-access-token \
@@ -37,7 +40,8 @@ export DATAVERSE_TOKEN="$(az account get-access-token \
 node provision.mjs --seed
 ```
 
-Then build the model-driven app, the custom connector, and the two flows per
+See [`provision/README.md`](provision/README.md) for both provisioners. Then
+build the model-driven app, the custom connector, and the two flows per
 [`../docs/deployment.md`](../docs/deployment.md).
 
 ## `package/` — the importable solution
@@ -70,16 +74,24 @@ Bump `<Version>` in `solution.xml` for each release.
 
 ## `provision/` — the tables
 
-`provision.mjs` (Node 18+, no dependencies) creates each table from
-`schema/tables.json`, idempotently:
+Two provisioners, same result — pick whichever fits how you work:
 
-- entities with their primary column, then every non-lookup column;
+- **`provision-console.js`** — paste into the browser console on your org
+  domain; authenticates with your signed-in session, so no install and no token.
+- **`provision.mjs`** — Node 18+ (no dependencies), driven from a terminal with
+  an access token.
+
+Both create, idempotently:
+
+- the **10 global choices** (option values `100000000…`, matching the web
+  resource's `CHOICES` map);
+- **8 entities** with their primary column, then every non-lookup column;
 - lookups as one-to-many relationships (second pass, once both ends exist);
 - the `bvr_flowid` alternate key;
-- choice columns bound to the global option sets from the imported solution;
-- `--seed` also imports the default standard + its rules from
-  [`seed/default-ruleset.json`](seed/default-ruleset.json).
+- optional **seed**: the default standard + its 8 rules.
 
-Re-runnable: anything that already exists is detected and skipped. Requires a
-bearer token for a user who can customise the environment (see the script
-header for the `az` one-liner).
+`schema/tables.json` is the source of truth for the table shapes; the Node
+script reads it directly and the console script embeds the same spec inline (a
+browser tab can't read the repo file). Anything that already exists is detected
+and skipped, so both are safe to re-run. See
+[`provision/README.md`](provision/README.md) for step-by-step instructions.

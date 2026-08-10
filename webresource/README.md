@@ -54,8 +54,19 @@ environment-filter aware):
   each with its flow, enabled state, and what it pins/asserts. A **New test case**
   button (on both Test Coverage and Test Cases) opens a quick-create that writes a
   `bvr_flowtestcase` row: name, flow (picked from `bvr_flowinventory`), enabled,
-  description, and a `bvr_casejson` body pre-filled with a
-  `{ trigger, mocks, variables, asserts }` template (validated as JSON on save).
+  description, and a **guided builder** for the `bvr_casejson` body — no raw JSON
+  required:
+  - **Trigger outputs** (JSON) — pins `triggerOutputs()` / `triggerBody()`.
+  - **Mocked actions** — repeatable rows (action name · status · outputs JSON)
+    that pin a connector's outcome so no live connector is called.
+  - **Variables** — repeatable name/value seeds (values parsed as JSON when they
+    parse, else kept as text).
+  - **Assertions** — repeatable typed rows mapping 1:1 to the engine's
+    `Assertion` union: No-failures, Action ran / skipped, Action status =,
+    Condition branch =, Variable =, Output =, Expression =.
+  - **Advanced · edit raw JSON** — a collapsible textarea that overrides the
+    builder for power users. The builder emits exactly the engine's
+    `{ trigger, mocks, variables, asserts }` `TestCase` shape.
 - **Test Runs** (`?data=testruns`) — mock-execution results (`bvr_flowtestrun`):
   status, passed/failed counts, duration, and when it ran.
 

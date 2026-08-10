@@ -109,6 +109,20 @@
   .envbreak .mini-bar i{display:block;height:100%}
   .kpi .val small{font-size:12px;color:var(--faint);font-weight:600}
   .kpi .subnote{font-size:11px;color:var(--faint);margin-top:3px}
+  .builder-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+  .btn.sm{height:26px;padding:0 9px;font-size:11.5px}
+  .builder-rows{display:flex;flex-direction:column;gap:8px}
+  .brow{display:flex;gap:8px;align-items:center}
+  .brow .input,.brow .select{height:30px;font-size:12.5px}
+  .brow>.input,.brow>.select{flex:1;min-width:0}
+  .brow .afields{display:flex;gap:8px;flex:1;min-width:0}
+  .brow .afields .input,.brow .afields .select{flex:1;min-width:0}
+  .brow .atype{flex:0 0 132px}
+  .brow .iconbtn{flex:none}
+  .builder-empty{font-size:12px;color:var(--faint);padding:2px 2px 4px}
+  details.adv{margin-top:8px}
+  details.adv summary{cursor:pointer;font-size:12px;color:var(--muted);user-select:none;list-style:revert}
+  details.adv .ta{margin-top:8px}
   .havatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7b52d6);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
 
   .wr-toolbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:0 0 16px}
@@ -517,10 +531,32 @@
       </div>
       <div class="field full"><label>What it pins / asserts <span class="hint">bvr_description</span></label>
         <textarea class="ta" id="t-desc" placeholder="Plain-English summary of the mocked inputs and what the run should do."></textarea></div>
-      <div class="field full"><label>Case JSON <span class="hint">bvr_casejson — trigger, mocks, variables, asserts</span></label>
-        <textarea class="ta mono" id="t-json" spellcheck="false"></textarea>
-        <span class="err-msg" id="t-json-err">Case JSON must be valid JSON.</span>
+
+      <div class="field full"><label>Trigger outputs <span class="hint">JSON · triggerOutputs() / triggerBody()</span></label>
+        <textarea class="ta mono" id="t-trigger" spellcheck="false" style="min-height:46px">{}</textarea></div>
+
+      <div class="field full">
+        <div class="builder-head"><label style="margin:0">Mocked actions <span class="hint">pin a connector's output &amp; status</span></label>
+          <button class="btn ghost sm" type="button" id="t-add-mock">+ Add mock</button></div>
+        <div class="builder-rows" id="t-mocks"></div>
       </div>
+
+      <div class="field full">
+        <div class="builder-head"><label style="margin:0">Variables <span class="hint">seed values before InitializeVariable</span></label>
+          <button class="btn ghost sm" type="button" id="t-add-var">+ Add variable</button></div>
+        <div class="builder-rows" id="t-vars"></div>
+      </div>
+
+      <div class="field full">
+        <div class="builder-head"><label style="margin:0">Assertions <span class="hint">what the simulated run must satisfy</span></label>
+          <button class="btn ghost sm" type="button" id="t-add-assert">+ Add assertion</button></div>
+        <div class="builder-rows" id="t-asserts"></div>
+      </div>
+
+      <details class="adv"><summary>Advanced · edit raw JSON (overrides the builder)</summary>
+        <textarea class="ta mono" id="t-json" spellcheck="false" placeholder="Leave blank to use the builder above. Paste a full { trigger, mocks, variables, asserts } object to override."></textarea>
+      </details>
+      <span class="err-msg" id="t-json-err">The case JSON is invalid — check the mock/variable/assert values are valid JSON.</span>
       <span class="err-msg" id="t-req-err">A test case name and a flow are both required.</span>
     </div>
     <div class="modal-f">
@@ -1177,14 +1213,87 @@ $('rmSave').addEventListener('click', async ()=>{
 /* ============================ ADD-TEST-CASE MODAL ============================ */
 const tcModal=$('tcModal');
 let tcEnabled=true;
-const TC_JSON_TEMPLATE = `{
-  "trigger": { "outputs": {} },
-  "mocks": {},
-  "variables": {},
-  "asserts": [
-    { "type": "noFailures" }
-  ]
-}`;
+const STATUS_OPTS = ['Succeeded','Failed','TimedOut','Skipped'];
+const ASSERT_TYPES = [
+  ['noFailures','No action failed'],
+  ['ran','Action ran'],
+  ['skipped','Action skipped'],
+  ['status','Action status ='],
+  ['branchTaken','Condition branch ='],
+  ['variableEquals','Variable ='],
+  ['outputEquals','Output ='],
+  ['expression','Expression ='],
+];
+const delBtn = '<button class="iconbtn" type="button" data-f="del" aria-label="Remove">✕</button>';
+
+/* -- builder row factories -- */
+function mockRow(){ const d=document.createElement('div'); d.className='brow'; d.dataset.kind='mock';
+  d.innerHTML = `<input class="input" data-f="action" placeholder="Action name (e.g. Get_a_row)">
+    <select class="select" data-f="status" style="flex:0 0 118px">${optlist_status()}</select>
+    <input class="input mono" data-f="outputs" placeholder='outputs JSON e.g. {"body":{"value":1}}'>${delBtn}`;
+  return d; }
+function optlist_status(){ return STATUS_OPTS.map(v=>`<option>${v}</option>`).join(''); }
+function varRow(){ const d=document.createElement('div'); d.className='brow'; d.dataset.kind='var';
+  d.innerHTML = `<input class="input" data-f="name" placeholder="Variable name">
+    <input class="input mono" data-f="value" placeholder="Value (JSON or text)">${delBtn}`;
+  return d; }
+function assertFieldsHtml(type){
+  switch(type){
+    case 'ran': case 'skipped': return `<input class="input" data-af="action" placeholder="Action name">`;
+    case 'status': return `<input class="input" data-af="action" placeholder="Action name"><select class="select" data-af="equals" style="flex:0 0 118px">${optlist_status()}</select>`;
+    case 'branchTaken': return `<input class="input" data-af="condition" placeholder="Condition action name"><select class="select" data-af="branch" style="flex:0 0 92px"><option value="yes">yes</option><option value="no">no</option></select>`;
+    case 'variableEquals': return `<input class="input" data-af="name" placeholder="Variable name"><input class="input mono" data-af="equals" placeholder="Expected (JSON or text)">`;
+    case 'outputEquals': case 'expression': return `<input class="input mono" data-af="expression" placeholder="@variables('x') or @outputs('Compose')"><input class="input mono" data-af="equals" placeholder="Expected (JSON or text)">`;
+    default: return `<span class="builder-empty" style="padding:6px 2px">passes when no action ended in Failed / TimedOut</span>`;
+  }
+}
+function assertRow(type){ type=type||'noFailures'; const d=document.createElement('div'); d.className='brow'; d.dataset.kind='assert';
+  d.innerHTML = `<select class="select atype" data-f="atype">${ASSERT_TYPES.map(([v,l])=>`<option value="${v}"${v===type?' selected':''}>${esc(l)}</option>`).join('')}</select>
+    <span class="afields" data-f="fields">${assertFieldsHtml(type)}</span>${delBtn}`;
+  return d; }
+function placeholderRow(kind){ const p=document.createElement('div'); p.className='builder-empty'; p.dataset.ph=kind;
+  p.textContent = kind==='mock'?'No mocks — external actions default to Succeeded.':'None.'; return p; }
+function ensurePlaceholder(host,kind){ if(!host.querySelector('.brow') && !host.querySelector('[data-ph]')) host.appendChild(placeholderRow(kind)); }
+function addRow(host,row){ const ph=host.querySelector('[data-ph]'); if(ph) ph.remove(); host.appendChild(row); }
+
+$('t-add-mock').addEventListener('click',()=>{ const r=mockRow(); addRow($('t-mocks'),r); r.querySelector('[data-f=action]').focus(); });
+$('t-add-var').addEventListener('click',()=>{ const r=varRow(); addRow($('t-vars'),r); r.querySelector('[data-f=name]').focus(); });
+$('t-add-assert').addEventListener('click',()=>{ const r=assertRow('ran'); addRow($('t-asserts'),r); r.querySelector('[data-af=action]')?.focus(); });
+
+/* delegated: remove row + assert-type change re-renders its fields */
+tcModal.addEventListener('click',e=>{ const del=e.target.closest('[data-f=del]'); if(del){ const row=del.closest('.brow'); const host=row.parentElement; const kind=row.dataset.kind; row.remove(); ensurePlaceholder(host,kind); } });
+tcModal.addEventListener('change',e=>{ const at=e.target.closest('[data-f=atype]'); if(at){ const row=at.closest('.brow'); row.querySelector('[data-f=fields]').innerHTML=assertFieldsHtml(at.value); } });
+
+function parseVal(s){ s=String(s==null?'':s).trim(); if(s==='') return ''; try{ return JSON.parse(s); }catch(_){ return s; } }
+/* Build the { trigger, mocks, variables, asserts } object from the builder rows. */
+function buildCaseJson(){
+  const out={};
+  const trg=$('t-trigger').value.trim();
+  if(trg && trg!=='{}') out.trigger={ outputs: JSON.parse(trg) };   // may throw → caught by caller
+  const mocks={};
+  $('t-mocks').querySelectorAll('.brow').forEach(r=>{ const a=r.querySelector('[data-f=action]').value.trim(); if(!a) return;
+    const m={ status:r.querySelector('[data-f=status]').value }; const o=r.querySelector('[data-f=outputs]').value.trim();
+    if(o) m.outputs=JSON.parse(o); mocks[a]=m; });
+  if(Object.keys(mocks).length) out.mocks=mocks;
+  const vars={};
+  $('t-vars').querySelectorAll('.brow').forEach(r=>{ const n=r.querySelector('[data-f=name]').value.trim(); if(!n) return;
+    vars[n]=parseVal(r.querySelector('[data-f=value]').value); });
+  if(Object.keys(vars).length) out.variables=vars;
+  const asserts=[];
+  $('t-asserts').querySelectorAll('.brow').forEach(r=>{ const t=r.querySelector('[data-f=atype]').value;
+    const g=k=>{ const el=r.querySelector('[data-af="'+k+'"]'); return el?el.value.trim():''; };
+    if(t==='noFailures') asserts.push({type:'noFailures'});
+    else if(t==='ran'||t==='skipped'){ const action=g('action'); if(action) asserts.push({type:t,action}); }
+    else if(t==='status'){ const action=g('action'); if(action) asserts.push({type:'status',action,equals:g('equals')||'Succeeded'}); }
+    else if(t==='branchTaken'){ const condition=g('condition'); if(condition) asserts.push({type:'branchTaken',condition,branch:g('branch')||'yes'}); }
+    else if(t==='variableEquals'){ const name=g('name'); if(name) asserts.push({type:'variableEquals',name,equals:parseVal(g('equals'))}); }
+    else if(t==='outputEquals'||t==='expression'){ const expression=g('expression'); if(expression) asserts.push({type:t,expression,equals:parseVal(g('equals'))}); }
+  });
+  if(!asserts.length) asserts.push({type:'noFailures'});
+  out.asserts=asserts;
+  return out;
+}
+
 async function openTestCaseModal(){
   const sel=$('t-flow'); sel.innerHTML='<option value="">Loading flows…</option>';
   tcModal.hidden=false; $('t-name').focus();
@@ -1195,7 +1304,11 @@ async function openTestCaseModal(){
       : '<option value="">No flows in inventory yet</option>';
   }catch(err){ sel.innerHTML='<option value="">Could not load flows</option>'; toast('Could not load flows: '+(err.message||err),'err'); }
 }
-function resetTcForm(){ ['t-name','t-desc'].forEach(id=>$(id).value=''); $('t-json').value=TC_JSON_TEMPLATE;
+function resetTcForm(){ ['t-name','t-desc','t-json'].forEach(id=>$(id).value=''); $('t-trigger').value='{}';
+  $('t-mocks').innerHTML=''; $('t-vars').innerHTML=''; $('t-asserts').innerHTML='';
+  ensurePlaceholder($('t-mocks'),'mock'); ensurePlaceholder($('t-vars'),'var');
+  $('t-asserts').appendChild(assertRow('noFailures'));           // sensible default assertion
+  const adv=$('t-json').closest('details'); if(adv) adv.open=false;
   tcEnabled=true; $('t-enabled').classList.remove('off'); $('t-req-err').classList.remove('show'); $('t-json-err').classList.remove('show'); }
 $('t-enabled').addEventListener('click',()=>{ tcEnabled=!tcEnabled; $('t-enabled').classList.toggle('off',!tcEnabled); });
 $('tcClose').addEventListener('click',()=>tcModal.hidden=true);
@@ -1207,8 +1320,10 @@ $('tcSave').addEventListener('click', async ()=>{
   const name=$('t-name').value.trim(); const sel=$('t-flow'); const opt=sel.options[sel.selectedIndex]; const flowId=sel.value;
   $('t-req-err').classList.remove('show'); $('t-json-err').classList.remove('show');
   if(!name||!flowId){ $('t-req-err').classList.add('show'); return; }
-  const json=$('t-json').value.trim()||'{}';
-  try{ JSON.parse(json); }catch(_){ $('t-json-err').classList.add('show'); return; }
+  let json;
+  const raw=$('t-json').value.trim();                              // advanced override
+  try{ json = raw ? JSON.stringify(JSON.parse(raw)) : JSON.stringify(buildCaseJson()); }
+  catch(_){ $('t-json-err').classList.add('show'); if(raw){ $('t-json').closest('details').open=true; } return; }
   const payload={ name, flowId, flowName:(opt&&opt.dataset.name)||'', env:(opt&&opt.dataset.env)||'', on:tcEnabled, desc:$('t-desc').value.trim(), json };
   const btn=$('tcSave'); btn.disabled=true; btn.textContent='Saving…';
   try{

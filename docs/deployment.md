@@ -42,9 +42,9 @@ The solution ships in two pieces (full detail in
    resource**. Pack and import:
 
    ```bash
-   cd solution/package && zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
+   cd solution/package && zip -r -X ../Ember_1_0_1_0.zip . -x '.*'
    # make.powerapps.com → Solutions → Import, or:
-   pac solution import --path solution/Ember_1_0_0_0.zip
+   pac solution import --path solution/Ember_1_0_1_0.zip
    ```
 
 2. **Provision the choices + six tables** from

@@ -14,7 +14,7 @@
  * safe to re-run after editing the schema.
  *
  * USAGE
- *   Import ../package/Ember_1_0_0_0.zip (publisher + web resource), then:
+ *   Import ../package/Ember_1_0_1_0.zip (publisher + web resource), then:
  *
  *     export DATAVERSE_URL="https://yourorg.crm.dynamics.com"
  *     export DATAVERSE_TOKEN="$(az account get-access-token \

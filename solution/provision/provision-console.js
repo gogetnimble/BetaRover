@@ -13,7 +13,7 @@
  * tab so you don't need a terminal or a token.
  *
  * HOW TO RUN
- *   1. Import ../package/Ember_1_0_0_0.zip first (publisher + web resource).
+ *   1. Import ../package/Ember_1_0_1_0.zip first (publisher + web resource).
  *   2. Open your environment in the browser and sign in — you MUST be on the org
  *      domain, e.g.  https://YOURORG.crm.dynamics.com  (open any model-driven
  *      app, or the "…/main.aspx" classic page). Do NOT run this from

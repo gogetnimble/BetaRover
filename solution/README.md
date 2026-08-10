@@ -23,11 +23,11 @@ match the web resource's `CHOICES` map out of the box.
 ```bash
 # 1. Pack the importable zip (or use the one in package/, if committed)
 cd solution/package
-zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
+zip -r -X ../Ember_1_0_1_0.zip . -x '.*'
 
-# 2. Import Ember_1_0_0_0.zip via the maker portal
+# 2. Import Ember_1_0_1_0.zip via the maker portal
 #    (make.powerapps.com → Solutions → Import solution) or:
-#    pac solution import --path ../Ember_1_0_0_0.zip
+#    pac solution import --path ../Ember_1_0_1_0.zip
 
 # 3. Provision the tables (+ seed the default standard/rules).
 #    Easiest: open your org (https://yourorg.crm.dynamics.com), F12 → Console,
@@ -70,7 +70,7 @@ Re-pack after editing the web resource:
 
 ```bash
 cp ../../webresource/bvr_flowreview_app.html package/WebResources/
-cd package && zip -r -X ../Ember_1_0_0_0.zip . -x '.*'
+cd package && zip -r -X ../Ember_1_0_1_0.zip . -x '.*'
 ```
 
 Bump `<Version>` in `solution.xml` for each release.

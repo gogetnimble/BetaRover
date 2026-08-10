@@ -26,7 +26,7 @@ shows; opened standalone (preview) it keeps the tab bar so you can still browse.
 The app module (`bvr_ember`) and its site map (`bvr_embersitemap`) are baked into
 [`../package/customizations.xml`](../package/customizations.xml) and declared as
 root components in [`../package/solution.xml`](../package/solution.xml), so
-**importing `Ember_1_0_0_0.zip` creates the app** — no designer clicks. After
+**importing `Ember_1_0_1_0.zip` creates the app** — no designer clicks. After
 import, the app appears under **Apps** in the solution and in the Power Apps app
 list as **Ember**; publish and play it.
 

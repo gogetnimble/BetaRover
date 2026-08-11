@@ -19,3 +19,6 @@ local.settings.json
 .DS_Store
 .vscode/
 .idea/
+
+# Generated Ember mockup (build with solution/app/mockup/build-mockup.mjs)
+solution/app/mockup/flow-review-mockup.html

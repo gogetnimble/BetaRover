@@ -1856,6 +1856,9 @@ document.addEventListener('click', async e=>{
 });
 
 const SECTION_LOADERS = { dash:loadDashboard, std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, testcoverage:loadTestCoverage, testcases:loadTestCases, testruns:loadTestRuns, standards:loadStandards, schedule:loadSchedule };
+/* Browser-tab title per section (avoids the raw "bvr_flowreview_app.html?data=" default). */
+const VIEW_TITLES = { dash:'Dashboard', flow:'Flow Review', std:'Review Rules', flowinventory:'Flow Inventory', reviewruns:'Review Runs', flowreviews:'Flow Reviews', findings:'Findings', testcoverage:'Test Coverage', testcases:'Test Cases', testruns:'Test Runs', standards:'Review Standards', schedule:'Crawl Schedule' };
+function setTitle(v){ document.title = 'Ember' + (VIEW_TITLES[v] ? ' · ' + VIEW_TITLES[v] : ''); }
 function resetSectionData(){ DASH_LOADED=INV_LOADED=RUNS_LOADED=FR_LOADED=FIND_LOADED=STDS_LOADED=SCH_LOADED=false; TCOV_LOADED=TCASE_LOADED=TRUN_LOADED=false; }
 function currentView(){ const el=document.querySelector('.view.active'); return el? el.id.replace('view-','') : 'dash'; }
 function reloadForEnv(){ resetSectionData(); (SECTION_LOADERS[currentView()]||loadDashboard)(); }
@@ -1863,6 +1866,7 @@ function switchView(v){
   document.querySelectorAll('.segmented button').forEach(x=>x.classList.toggle('active',x.dataset.view===v));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
   const el=document.getElementById('view-'+v); if(el) el.classList.add('active');
+  setTitle(v);
   if(SECTION_LOADERS[v]) SECTION_LOADERS[v]();
   window.scrollTo(0,0);
 }
@@ -1947,6 +1951,7 @@ async function loadIdentity(){
     rules:'std', 'review-rules':'std', standard:'std', 'standard-rules':'std', std:'std',
     schedule:'schedule', 'crawl-schedule':'schedule' };
   if (PAGE_MAP[page]) switchView(PAGE_MAP[page]);
+  setTitle(currentView());   // brand the browser tab on first load too
   const deep = q.get('flowReviewId') || q.get('id');
   if(deep) openDetail(deep);
 })();

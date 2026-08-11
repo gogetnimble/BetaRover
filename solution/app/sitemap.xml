@@ -17,6 +17,8 @@
      Review Standards -> ?data=standards
      Review Rules     -> ?data=rules
      Crawl Schedule   -> ?data=schedule
+     License          -> ?data=license
+     Getting Started  -> bvr_gettingstarted.html   (a separate web resource)
 
   Web-resource subareas take a query string on the /WebResources/ URL form
   (the $webresource: token form does not), which is why each Url is written out
@@ -55,6 +57,10 @@
         <Titles><Title LCID="1033" Title="Review Rules" /></Titles></SubArea>
       <SubArea Id="sa_schedule" Url="/WebResources/bvr_flowreview_app.html?data=schedule">
         <Titles><Title LCID="1033" Title="Crawl Schedule" /></Titles></SubArea>
+      <SubArea Id="sa_license" Url="/WebResources/bvr_flowreview_app.html?data=license">
+        <Titles><Title LCID="1033" Title="License" /></Titles></SubArea>
+      <SubArea Id="sa_gettingstarted" Url="/WebResources/bvr_gettingstarted.html">
+        <Titles><Title LCID="1033" Title="Getting Started" /></Titles></SubArea>
     </Group>
   </Area>
 </SiteMap>

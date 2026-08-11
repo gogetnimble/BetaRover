@@ -389,6 +389,7 @@
       <button data-view="standards" role="tab">Review Standards</button>
       <button data-view="std" role="tab">Review Rules</button>
       <button data-view="schedule" role="tab">Crawl Schedule</button>
+      <button data-view="license" role="tab">License</button>
     </div>
   </div>
 
@@ -482,6 +483,30 @@
   <section class="view" id="view-testruns"><div class="grid-shell" id="grid-testruns"></div></section>
   <section class="view" id="view-standards"><div class="grid-shell" id="grid-standards"></div></section>
   <section class="view" id="view-schedule"><div class="grid-shell" id="grid-schedule"></div></section>
+
+  <!-- ===================== LICENSE ===================== -->
+  <section class="view" id="view-license">
+    <div class="page-head"><div>
+      <h2>License</h2>
+      <div class="sub">Request or ask about your Ember license. We'll get back to you by email.</div>
+    </div></div>
+    <div class="card pad" style="max-width:640px">
+      <div class="eyebrow" style="margin-bottom:10px">Contact</div>
+      <div class="field full"><label>Email</label>
+        <input class="input" id="lic-email" type="email" autocomplete="email" placeholder="you@company.com"></div>
+      <div class="field full" style="margin-top:12px"><label>Comments</label>
+        <textarea class="ta" id="lic-comments" placeholder="Seat count, environments in scope, questions — anything that helps us."></textarea></div>
+      <span class="err-msg" id="lic-err">Enter a valid email address.</span>
+      <div style="margin-top:14px; display:flex; gap:12px; align-items:center">
+        <button class="btn primary" id="lic-submit" type="button">Submit request</button>
+        <span class="mono" id="lic-status" style="font-size:12px; color:var(--faint)"></span>
+      </div>
+      <div class="note" style="margin-top:16px">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6h.01"/></svg>
+        <span id="lic-note">This form posts your request to the configured license service.</span>
+      </div>
+    </div>
+  </section>
 </div>
 
 <!-- ===== ADD-RULE MODAL (Quick Create for bvr_reviewrule) ===== -->
@@ -609,7 +634,13 @@ const CONFIG = {
     ruleToStandard:'bvr_standardid',           // single-valued (rule → standard)
     testToInventory:'bvr_flowinventoryid'      // single-valued (test case / test run → inventory)
   },
-  poll: { intervalMs:4000, timeoutMs:180000 } // on-demand run polling
+  poll: { intervalMs:4000, timeoutMs:180000 }, // on-demand run polling
+  // License request endpoint — the service YOU define (e.g. a Power Automate
+  // "When an HTTP request is received" URL, an Azure Function, or a Logic App).
+  // The License page POSTs { email, comments, org, user, source, submittedOn } as
+  // JSON here. Leave '' until you have a URL. NOTE: the org's Content Security
+  // Policy must allow connect-src to this host for the browser to POST to it.
+  licenseEndpoint: ''
 };
 /* Published OPTION-SET INTEGER VALUES — SET THESE TO MATCH YOUR ENVIRONMENT.
    Only used on WRITE (creating a rule / queuing an on-demand run). Reads use
@@ -901,6 +932,14 @@ const Live = {
       return { userId, fullName:u.fullname||'', email:u.internalemailaddress||u.domainname||'',
         title:u.title||'', businessUnit:(u.businessunitid&&u.businessunitid.name)||'', roles };
     }catch(_){ return { userId, fullName:'', email:'', title:'', businessUnit:'', roles:[] }; }
+  },
+  async submitLicense(payload){
+    if(!CONFIG.licenseEndpoint) throw new Error('No license service configured yet (set CONFIG.licenseEndpoint).');
+    let env=''; try{ env=(await this.meta()).env; }catch(_){}
+    const body = { email:payload.email, comments:payload.comments, org:env, user:payload.email, source:'Ember', submittedOn:new Date().toISOString() };
+    const res = await fetch(CONFIG.licenseEndpoint, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+    if(!res.ok) throw new Error('the service returned HTTP '+res.status);
+    return true;
   },
   async activeStandard(){
     const r = await XRM.WebApi.retrieveMultipleRecords(CONFIG.entities.standard,
@@ -1204,7 +1243,8 @@ const Demo = {
   async setRuleEnabled(id,on){ const r=this._rules.find(x=>x.id===id); if(r) r.on=on; },
   async queueOnDemand(){ return 'demo-run'; },
   async runOutcome(){ return { status:'completed', done:true }; },
-  async latestReviewForFlow(){ return null; }
+  async latestReviewForFlow(){ return null; },
+  async submitLicense(){ await new Promise(r=>setTimeout(r,400)); return true; }
 };
 
 const DS = LIVE ? Live : Demo;
@@ -1825,6 +1865,25 @@ document.addEventListener('click', async e=>{
   finally{ b.disabled=false; b.textContent=prev; }
 });
 
+let LIC_WIRED=false;
+async function loadLicense(){
+  // prefill the email from the signed-in user (WhoAmI) once available
+  const emailEl=$('lic-email');
+  if(emailEl && !emailEl.value){ try{ const id=ME||await DS.identity(); if(id && id.email) emailEl.value=id.email; }catch(_){} }
+  if(!LIVE || !CONFIG.licenseEndpoint) $('lic-note').textContent = LIVE
+    ? 'No license service is configured yet (set CONFIG.licenseEndpoint in the web resource).'
+    : 'Preview — submitting here is a no-op. In the app it posts to the configured license service.';
+  if(LIC_WIRED) return; LIC_WIRED=true;
+  $('lic-submit').addEventListener('click', async ()=>{
+    const email=$('lic-email').value.trim(); const comments=$('lic-comments').value.trim();
+    $('lic-err').classList.remove('show');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('lic-err').classList.add('show'); return; }
+    const btn=$('lic-submit'), st=$('lic-status'); btn.disabled=true; st.style.color='var(--faint)'; st.textContent='Submitting…';
+    try{ await DS.submitLicense({ email, comments }); st.style.color='var(--good)'; st.textContent='Submitted — thank you, we’ll be in touch.'; $('lic-comments').value=''; }
+    catch(err){ st.style.color='var(--bad)'; st.textContent='Could not submit: '+(err.message||err); }
+    finally{ btn.disabled=false; }
+  });
+}
 async function loadSchedule(){ if(SCH_LOADED) return; SCH_LOADED=true;
   let std=null; try{ std=await DS.activeStandard(); }catch(_){}
   const allf = std && std.reviewAllFlows;
@@ -1855,9 +1914,9 @@ document.addEventListener('click', async e=>{
     catch(err){ toast('Could not open: '+(err.message||err),'err'); } }
 });
 
-const SECTION_LOADERS = { dash:loadDashboard, std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, testcoverage:loadTestCoverage, testcases:loadTestCases, testruns:loadTestRuns, standards:loadStandards, schedule:loadSchedule };
+const SECTION_LOADERS = { dash:loadDashboard, std:loadStandard, flowinventory:loadInventory, reviewruns:loadRuns, flowreviews:loadFlowReviews, findings:loadFindings, testcoverage:loadTestCoverage, testcases:loadTestCases, testruns:loadTestRuns, standards:loadStandards, schedule:loadSchedule, license:loadLicense };
 /* Browser-tab title per section (avoids the raw "bvr_flowreview_app.html?data=" default). */
-const VIEW_TITLES = { dash:'Dashboard', flow:'Flow Review', std:'Review Rules', flowinventory:'Flow Inventory', reviewruns:'Review Runs', flowreviews:'Flow Reviews', findings:'Findings', testcoverage:'Test Coverage', testcases:'Test Cases', testruns:'Test Runs', standards:'Review Standards', schedule:'Crawl Schedule' };
+const VIEW_TITLES = { dash:'Dashboard', flow:'Flow Review', std:'Review Rules', flowinventory:'Flow Inventory', reviewruns:'Review Runs', flowreviews:'Flow Reviews', findings:'Findings', testcoverage:'Test Coverage', testcases:'Test Cases', testruns:'Test Runs', standards:'Review Standards', schedule:'Crawl Schedule', license:'License' };
 function setTitle(v){ document.title = 'Ember' + (VIEW_TITLES[v] ? ' · ' + VIEW_TITLES[v] : ''); }
 function resetSectionData(){ DASH_LOADED=INV_LOADED=RUNS_LOADED=FR_LOADED=FIND_LOADED=STDS_LOADED=SCH_LOADED=false; TCOV_LOADED=TCASE_LOADED=TRUN_LOADED=false; }
 function currentView(){ const el=document.querySelector('.view.active'); return el? el.id.replace('view-','') : 'dash'; }
@@ -1880,9 +1939,11 @@ document.getElementById('themeBtn').addEventListener('click',()=>{
 /* ---- signed-in user profile (WhoAmI + systemuser) ---- */
 function initialsOf(name){ const p=String(name||'').trim().split(/\s+/).filter(Boolean);
   return p.length>=2 ? (p[0][0]+p[1][0]).toUpperCase() : (p[0]?p[0].slice(0,2).toUpperCase():'··'); }
+let ME=null;   // signed-in user profile (from WhoAmI + systemuser), used to prefill forms
 async function loadIdentity(){
   let id=null; try{ id=await DS.identity(); }catch(_){}
   if(!id) return;
+  ME=id;
   const av=$('userAvatar'), card=$('userCard');
   if(id.fullName){ av.textContent=initialsOf(id.fullName); av.title='Signed in as '+id.fullName+(id.email?(' · '+id.email):''); }
   const roles=(id.roles&&id.roles.length) ? id.roles.map(r=>`<span class="rolechip">${esc(r)}</span>`).join('')
@@ -1949,7 +2010,8 @@ async function loadIdentity(){
     testruns:'testruns', 'test-runs':'testruns',
     standards:'standards', 'review-standards':'standards',
     rules:'std', 'review-rules':'std', standard:'std', 'standard-rules':'std', std:'std',
-    schedule:'schedule', 'crawl-schedule':'schedule' };
+    schedule:'schedule', 'crawl-schedule':'schedule',
+    license:'license', licence:'license' };
   if (PAGE_MAP[page]) switchView(PAGE_MAP[page]);
   setTitle(currentView());   // brand the browser tab on first load too
   const deep = q.get('flowReviewId') || q.get('id');

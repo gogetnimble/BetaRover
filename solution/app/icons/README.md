@@ -36,6 +36,8 @@ Unified Interface — no separate dark variants needed.
 | `ember-standards.svg` | Review Standards | `/WebResources/bvr_flowreview_app.html?data=standards` |
 | `ember-rules.svg` | Review Rules | `/WebResources/bvr_flowreview_app.html?data=rules` |
 | `ember-schedule.svg` | Crawl Schedule | `/WebResources/bvr_flowreview_app.html?data=schedule` |
+| `ember-license.svg` | License | `/WebResources/bvr_flowreview_app.html?data=license` |
+| `ember-gettingstarted.svg` | Getting Started | `/WebResources/bvr_gettingstarted.html` |
 | `ember-app.svg` | — (app icon) | — |
 
 `_preview.html` is a local contact sheet of all twelve — open it in a browser to

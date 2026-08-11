@@ -25,6 +25,21 @@
       <IsAvailableForMobileOffline>0</IsAvailableForMobileOffline>
       <LanguageCode>0</LanguageCode>
     </WebResource>
+    <WebResource>
+      <WebResourceId>{a2c4b1f0-6e5d-48a8-9b10-4a5b3c2d1e0f}</WebResourceId>
+      <Name>bvr_gettingstarted.html</Name>
+      <DisplayName>Ember — Getting Started</DisplayName>
+      <Description>Getting Started user guide for the Ember app.</Description>
+      <FileName>/WebResources/bvr_gettingstarted.html</FileName>
+      <WebResourceType>1</WebResourceType>
+      <IsCustomizable>1</IsCustomizable>
+      <CanBeDeleted>1</CanBeDeleted>
+      <IsHidden>0</IsHidden>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsEnabledForMobileClient>0</IsEnabledForMobileClient>
+      <IsAvailableForMobileOffline>0</IsAvailableForMobileOffline>
+      <LanguageCode>0</LanguageCode>
+    </WebResource>
   </WebResources>
   <Languages>
     <Language>1033</Language>

@@ -39,8 +39,9 @@ app + site map to the next environment cleanly.
 3. **Edit the site map.** In the app designer open the site map editor, choose
    **Switch to classic** (or edit the app's site map XML), and reproduce
    [`sitemap.xml`](sitemap.xml): three groups (Review, Unit Testing, Configuration)
-   with the eleven subareas, each a **Web Resource** subarea whose **URL** is
-   `/WebResources/bvr_flowreview_app.html?data=<section>` per the table below.
+   with the subareas below. Most are a **URL** subarea pointing at
+   `/WebResources/bvr_flowreview_app.html?data=<section>`; **Getting Started** is a
+   separate web resource (`/WebResources/bvr_gettingstarted.html`, no `?data=`).
 4. **Save & Publish.**
 
 | Group | Menu item | `data=` | Web-resource section |
@@ -56,6 +57,8 @@ app + site map to the next environment cleanly.
 | Configuration | Review Standards | `standards` | `bvr_reviewstandard` grid |
 | Configuration | Review Rules | `rules` | active standard + rules editor |
 | Configuration | Crawl Schedule | `schedule` | schedule / Review-all-flows summary |
+| Configuration | License | `license` | license request form (email + comments → your service) |
+| Configuration | Getting Started | *(separate web resource)* | `/WebResources/bvr_gettingstarted.html` — the user guide |
 
 Clicking a flow in any grid opens its **Flow Review** (drill-down inside the web
 resource); clicking a run opens that run's Flow Reviews.

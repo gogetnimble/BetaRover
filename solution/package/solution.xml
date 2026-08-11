@@ -83,6 +83,7 @@
     </Publisher>
     <RootComponents>
       <RootComponent type="61" schemaName="bvr_flowreview_app.html" behavior="0" />
+      <RootComponent type="61" schemaName="bvr_gettingstarted.html" behavior="0" />
     </RootComponents>
     <MissingDependencies />
   </SolutionManifest>

@@ -55,6 +55,19 @@ Findings grids to that environment (server-side via `$filter` / a FetchXML
 `bvr_flowinventory` link; the severity donut and rule bars are scoped too).
 "All environments" clears it.
 
+### License section
+
+**Configuration → License** (`?data=license`) is a request form — email (prefilled
+from WhoAmI) + comments — that POSTs `{ email, comments, org, user, source,
+submittedOn }` as JSON to **`CONFIG.licenseEndpoint`** (a service *you* define: a
+Power Automate "When an HTTP request is received" URL, an Azure Function, or a
+Logic App). Leave `licenseEndpoint` empty until you have a URL; the page says so.
+The org's Content Security Policy must allow `connect-src` to that host.
+
+A separate **Getting Started** guide ships as its own web resource
+(`bvr_gettingstarted.html`) — link it from the site map at
+`/WebResources/bvr_gettingstarted.html`.
+
 ### Unit Testing sections
 
 Three routable sections back the **Unit Testing** site-map group (all

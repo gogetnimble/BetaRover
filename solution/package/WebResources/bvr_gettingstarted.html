@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ember · Getting Started</title>
+<style>
+  :root{
+    --bg:#eef1f7; --panel:#ffffff; --panel-2:#f6f8fc; --border:#d7dded; --border-strong:#c3cbe0;
+    --text:#1b2233; --muted:#4c586e; --faint:#7a869e;
+    --accent:#7a120c; --accent-2:#b32717; --accent-weak:#fbecea;
+    --good:#1f9d63; --warn:#8a6d00; --info:#2f5bff;
+    --flame1:#b32717; --flame2:#7a120c;
+    --radius:12px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c101b; --panel:#151b2b; --panel-2:#101623; --border:#26304a; --border-strong:#334063;
+      --text:#e7ecf5; --muted:#aab3c6; --faint:#7c8aa5; --accent:#ef6a4a; --accent-2:#ef6a4a; --accent-weak:#2a1512; --info:#5f83ff;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.6;font-size:15px}
+  .wrap{max-width:860px;margin:0 auto;padding:26px 22px 80px}
+  header.hero{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .flame{width:40px;height:40px;border-radius:10px;flex:none;background:linear-gradient(135deg,var(--flame1),var(--flame2));display:grid;place-items:center;color:#fff}
+  .flame svg{width:24px;height:24px}
+  h1{font-size:24px;margin:0}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  .lead{color:var(--muted);font-size:16px;margin:10px 0 26px}
+  h2{font-size:18px;margin:34px 0 10px;padding-top:14px;border-top:1px solid var(--border)}
+  h3{font-size:15px;margin:20px 0 6px}
+  p{margin:8px 0}
+  a{color:var(--info);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:12.5px;background:var(--panel-2);border:1px solid var(--border);border-radius:5px;padding:1px 6px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin:14px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:14px 0}
+  .tile{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:13px 15px}
+  .tile b{display:block;font-size:14px}
+  .tile span{color:var(--muted);font-size:13px}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  tr:last-child td{border-bottom:0}
+  td code{white-space:nowrap}
+  ol,ul{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  .steps{counter-reset:step;list-style:none;padding-left:0}
+  .steps>li{position:relative;padding-left:40px;margin:14px 0}
+  .steps>li::before{counter-increment:step;content:counter(step);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--accent-weak);color:var(--accent);font-weight:700;font-size:13px;display:grid;place-items:center;border:1px solid var(--border-strong)}
+  .note{display:flex;gap:10px;align-items:flex-start;background:var(--accent-weak);border:1px solid var(--border-strong);border-radius:10px;padding:12px 14px;margin:14px 0;font-size:14px;color:var(--muted)}
+  .note svg{width:18px;height:18px;flex:none;color:var(--accent);margin-top:2px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-weak);border:1px solid var(--border-strong);border-radius:20px;padding:2px 9px}
+  footer{margin-top:40px;color:var(--faint);font-size:12.5px;border-top:1px solid var(--border);padding-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <span class="flame"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.6 1.6c.7 2.6-.5 4.3-2 6-1.4 1.6-3 3.1-3 5.8a5.4 5.4 0 0 0 10.8.2c0-2.1-1-3.8-2.1-5.1-.2 1.1-.8 2-1.8 2.4.8-3-.6-5.9-1.9-9.3z"/><path d="M9 14.2c-.1 1.8 1.1 3.2 2.8 3.5-1-1-1.4-2.2-1-3.5.3-.9-.1-2-.7-2.7-.7.7-1.1 1.7-1.1 2.7z" opacity=".55"/></svg></span>
+    <div><div class="eyebrow">Getting started</div><h1>Ember</h1></div>
+  </header>
+  <p class="lead">Ember crawls your tenant for Power Automate cloud flows and code-reviews them against a delivery standard you control — then lets you unit-test the flows and track their health over time. This guide covers what each area does and how to get going.</p>
+
+  <h2>What Ember does</h2>
+  <div class="grid">
+    <div class="tile"><b>Reviews flows</b><span>A nightly crawl (or on-demand run) scores every cloud flow against your standard and records the findings.</span></div>
+    <div class="tile"><b>Standards you own</b><span>Rules, thresholds and severities live in Dataverse — change them without touching code or redeploying.</span></div>
+    <div class="tile"><b>Unit-tests flows</b><span>Author mocked test cases and run them in-browser to confirm a flow behaves — no live connectors called.</span></div>
+    <div class="tile"><b>Tenant-wide view</b><span>Filter everything by environment; track score trends, compliance and test health on the dashboard.</span></div>
+  </div>
+
+  <h2>Finding your way around</h2>
+  <p>The left navigation has three groups. Every item opens the same Ember screen at a different section:</p>
+  <table>
+    <thead><tr><th>Group</th><th>Item</th><th>What you'll see</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="5"><b>Review</b></td><td>Dashboard</td><td>Headline stats — average score, compliant flows, open findings, inventory &amp; unit-test health, and a score trend.</td></tr>
+      <tr><td>Flow Inventory</td><td>Every discovered flow with owner, state, environment and source.</td></tr>
+      <tr><td>Review Runs</td><td>Each crawl / on-demand execution and its totals.</td></tr>
+      <tr><td>Flow Reviews</td><td>The latest run's per-flow scores; click one to open its findings.</td></tr>
+      <tr><td>Findings</td><td>Every rule outcome in the latest run, by severity.</td></tr>
+      <tr><td rowspan="3"><b>Unit Testing</b></td><td>Flow Coverage</td><td>Flows by environment with last-reviewed vs last-test-pass dates, and a <b>Run tests</b> button per flow.</td></tr>
+      <tr><td>Test Cases</td><td>Your mocked unit tests; <b>New test case</b> opens a guided builder.</td></tr>
+      <tr><td>Test Runs</td><td>Mock-execution results — pass/fail counts and duration.</td></tr>
+      <tr><td rowspan="4"><b>Configuration</b></td><td>Review Standards</td><td>The delivery standards; the active one drives the crawl.</td></tr>
+      <tr><td>Review Rules</td><td>The active standard's rules — edit thresholds, severity, weight, or add a rule.</td></tr>
+      <tr><td>Crawl Schedule</td><td>When the nightly crawl runs and how on-demand reviews are triggered.</td></tr>
+      <tr><td>License</td><td>Request or ask about your Ember license.</td></tr>
+    </tbody>
+  </table>
+  <div class="note"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6h.01"/></svg>
+    <span>The <b>Environment</b> filter at the top scopes the whole app — pick one environment or leave it on <b>All environments</b>.</span></div>
+
+  <h2>Everyday use</h2>
+  <h3>Read the dashboard</h3>
+  <p>Start on <b>Dashboard</b>. The tiles summarise the latest review run: average score (with the change vs the previous run), how many flows are compliant, open findings, and unit-test pass rate. The <b>By environment</b> card breaks the numbers down per environment.</p>
+  <h3>Open a flow's review</h3>
+  <p>On the dashboard or <b>Flow Reviews</b>, click a flow to see its findings — each rule's pass / warning / fail, the evidence, and how to remediate. AI observations (if enabled) are listed separately.</p>
+  <h3>Run a review on demand</h3>
+  <p>From a flow's review, <b>Run review now</b> queues an on-demand run for that single flow and refreshes when it finishes — useful right after you've changed a flow.</p>
+
+  <h2>Tuning the standard</h2>
+  <p>Under <b>Configuration → Review Rules</b> you'll find the active standard and its rules. Every threshold — the naming prefix, the approved email sender, the required scopes, the <code>$top</code> row count — lives in a rule's <b>Parameters</b>. Change a value and the next crawl uses it: no code change, no redeploy. Severity and weight drive the 0–100 score. Use <b>New rule</b> to add your own criterion.</p>
+
+  <h2>Unit-testing a flow</h2>
+  <ol class="steps">
+    <li><b>Add a test case.</b> On <b>Flow Coverage</b> or <b>Test Cases</b>, click <b>New test case</b>. Pick the flow, then use the guided builder to pin the trigger outputs, mock connector actions (their outputs &amp; status), seed variables, and add assertions (action ran / status = / variable = / …).</li>
+    <li><b>Run the tests.</b> On <b>Flow Coverage</b>, click <b>Run tests</b> for a flow. Ember reads the flow's definition and executes each case through an in-browser mock runner — no live connectors are called.</li>
+    <li><b>Read the result.</b> A pass/fail result is written to <b>Test Runs</b>, and the flow's <b>last test pass</b> date and the dashboard's unit-test tiles update.</li>
+  </ol>
+
+  <h2>Licensing</h2>
+  <p>Use <b>Configuration → License</b> to send your email and any comments (seat count, environments in scope, questions). It reaches our team and we'll follow up by email.</p>
+
+  <h2>Admin: first-time setup</h2>
+  <p>If you're standing Ember up for the first time:</p>
+  <ol class="steps">
+    <li><b>Import the solution</b> (<code>Ember_1_0_1_0.zip</code>) — brings in the publisher and the web resource(s).</li>
+    <li><b>Provision the tables &amp; choices</b> — run the provisioner (browser console or Node) to create the 8 tables, 10 global choices and the seed standard.</li>
+    <li><b>Build the model-driven app</b> — add the web resource and the site map (the three groups above), with an icon per item.</li>
+    <li><b>Wire the crawl</b> — build the Crawl Orchestrator flow and the review connector/engine so runs populate the data.</li>
+    <li><b>Grant access</b> — give reviewers the Flow Review security role (Read on the <code>bvr_*</code> tables; Create where they'll add rules / test cases / runs).</li>
+  </ol>
+  <div class="note"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 10l4 4 8-9"/></svg>
+    <span>Until the crawl has run, the grids are empty and the Environment filter lists only environments that already have flows in the inventory — that's expected on a fresh setup.</span></div>
+
+  <footer>Ember — Power Automate flow code review &amp; unit testing. This page is a web resource; open it from the app's navigation.</footer>
+</div>
+</body>
+</html>

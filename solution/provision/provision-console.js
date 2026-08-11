@@ -32,6 +32,7 @@
 
   const SOLUTION = window.EMBER_SOLUTION || 'Ember';
   const SEED = window.EMBER_SEED === true;
+  const COL_FAIL = [];   // columns that failed to create (surfaced in the summary)
   const LCID = 1033;
 
   /* ---- resolve the Web API base from the current page ---------------------- */
@@ -226,14 +227,25 @@
     RequiredLevel: { Value: 'None' }, DisplayName: label(pretty(col.schemaName)),
     Format: 'DateAndTime', DateTimeBehavior: { Value: 'UserLocal' },
   });
-  const picklistAttr = (col, table) => {
+  // Resolve a global option set's MetadataId (GUID) once; binding a picklist
+  // column by MetadataId is reliable, whereas binding by the Name alternate key
+  // is rejected on many environments (which silently skipped every choice column).
+  const _osId = {};
+  const optionSetId = async (name) => {
+    if (_osId[name]) return _osId[name];
+    const r = await api('GET', `GlobalOptionSetDefinitions(Name='${name}')?$select=MetadataId`);
+    _osId[name] = r.MetadataId;
+    return r.MetadataId;
+  };
+  const picklistAttr = async (col, table) => {
     const g = col.schemaName === 'bvr_status' ? STATUS_OPTIONSET_BY_TABLE[table] : GLOBAL_OPTIONSET[col.schemaName];
     if (!g) throw new Error(`No global option set mapped for ${table}.${col.schemaName}`);
+    const id = await optionSetId(g);
     return {
       '@odata.type': 'Microsoft.Dynamics.CRM.PicklistAttributeMetadata',
       SchemaName: col.schemaName, LogicalName: col.schemaName.toLowerCase(),
       RequiredLevel: { Value: 'None' }, DisplayName: label(pretty(col.schemaName)),
-      'GlobalOptionSet@odata.bind': `/GlobalOptionSetDefinitions(Name='${g}')`,
+      'GlobalOptionSet@odata.bind': `/GlobalOptionSetDefinitions(${id})`,
     };
   };
 
@@ -285,11 +297,11 @@
         case 'Decimal': attr = decimalAttr(col); break;
         case 'Boolean': attr = boolAttr(col); break;
         case 'DateTime': attr = dateAttr(col); break;
-        case 'Choice': attr = picklistAttr(col, table.schemaName); break;
+        case 'Choice': attr = await picklistAttr(col, table.schemaName); break;
         default: console.error(`      ! ${col.schemaName}: unhandled type ${col.type}`); continue;
       }
       try { await api('POST', `EntityDefinitions(LogicalName='${logical}')/Attributes`, attr, solHeader); console.log(`      + ${col.schemaName} (${col.type})`); }
-      catch (e) { console.error(`      ! ${col.schemaName}: ${e.message}`); }
+      catch (e) { COL_FAIL.push(`${table.schemaName}.${col.schemaName}: ${e.message}`); console.error(`      ! ${col.schemaName}: ${e.message}`); }
     }
   }
 
@@ -374,5 +386,11 @@
     }
   }
 
+  if (COL_FAIL.length) {
+    console.error(`%c${COL_FAIL.length} column(s) FAILED — the app will error on these. Fix and re-run:`, 'color:#b32717;font-weight:bold');
+    COL_FAIL.forEach((m) => console.error('   ! ' + m));
+  } else {
+    console.log('%cAll columns created (0 failures).', 'color:#1a7f37;font-weight:bold');
+  }
   console.log('%cDone. ' + (SEED ? '' : 'Set window.EMBER_SEED = true and re-run to seed the default ruleset. ') + 'Add the tables to the Ember app in the maker portal.', 'color:#7a120c;font-weight:bold');
 })().catch((e) => { console.error('FAILED:', e.message, e.body || ''); });

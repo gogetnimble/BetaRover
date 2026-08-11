@@ -169,16 +169,26 @@ function dateAttr(col) {
     Format: 'DateAndTime', DateTimeBehavior: { Value: 'UserLocal' },
   };
 }
-function picklistAttr(col, table) {
+const _osId = {};
+async function optionSetId(name) {
+  if (_osId[name]) return _osId[name];
+  const r = await api('GET', `GlobalOptionSetDefinitions(Name='${name}')?$select=MetadataId`);
+  _osId[name] = r.MetadataId;
+  return r.MetadataId;
+}
+async function picklistAttr(col, table) {
   const globalName = col.schemaName === 'bvr_status'
     ? STATUS_OPTIONSET_BY_TABLE[table]
     : GLOBAL_OPTIONSET[col.schemaName];
   if (!globalName) throw new Error(`No global option set mapped for ${table}.${col.schemaName}`);
+  // Bind by MetadataId — binding by the Name alternate key is rejected on many
+  // environments, which silently skipped every choice column.
+  const id = await optionSetId(globalName);
   return {
     '@odata.type': 'Microsoft.Dynamics.CRM.PicklistAttributeMetadata',
     SchemaName: col.schemaName, LogicalName: col.schemaName.toLowerCase(),
     RequiredLevel: { Value: 'None' }, DisplayName: label(prettyName(col.schemaName)),
-    'GlobalOptionSet@odata.bind': `/GlobalOptionSetDefinitions(Name='${globalName}')`,
+    'GlobalOptionSet@odata.bind': `/GlobalOptionSetDefinitions(${id})`,
   };
 }
 function prettyName(schema) {
@@ -212,7 +222,7 @@ async function createAttribute(table, col) {
     case 'Decimal': attr = decimalAttr(col); break;
     case 'Boolean': attr = boolAttr(col); break;
     case 'DateTime': attr = dateAttr(col); break;
-    case 'Choice': attr = picklistAttr(col, table.schemaName); break;
+    case 'Choice': attr = await picklistAttr(col, table.schemaName); break;
     case 'Lookup': return; // handled in the relationship pass
     default: throw new Error(`Unhandled column type ${col.type} for ${col.schemaName}`);
   }

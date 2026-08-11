@@ -25,21 +25,37 @@ tenant. `steps.json` is a readable action-by-action contract.
    - Compose these into a `ruleset` object matching the engine's `Ruleset` shape
      (parse `bvr_parametersjson` per rule into `parameters`).
 4. **Try** (Scope):
-   1. **Enumerate flows — Dataverse.** `List rows` on `workflows`:
-      - `$filter`: `category eq 5` (cloud flows), **plus** `and statecode eq 1`
-        (activated only) unless the active standard's **`bvr_reviewallflows`** is
-        on — when on, the `statecode` clause is dropped so draft/suspended flows
-        are reviewed too. See `steps.json` for the exact expression.
-      - `$select`: `workflowid,name,clientdata,modifiedon,statecode`
-      - `$top`: a sensible page size (e.g. 5000); page with `@odata.nextLink`.
-   2. **Enrich — Management API.** For each flow (or in bulk per environment),
-      call the Power Automate Management API to resolve **owner principal type**,
-      **environment**, and **state**. Map `creator`/`referencedResources` to
-      `ownerType` (`user` | `application` | `team`).
-   3. **Upsert Flow Inventory** keyed on `bvr_flowid` (`workflowid`). Compute
-      `bvr_definitionhash` from `clientdata`; if unchanged since last run, mark
-      the flow reviewed-from-cache and skip the engine call.
-   4. **Apply to each flow:**
+   1. **Enumerate environments — BAP API.** `GET
+      https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments?api-version=2020-06-01`.
+      Shape the response with the engine's **`parseEnvironments()`** and use
+      **`environmentLabel(env)`** as the `bvr_environment` value written below.
+      This makes every tenant environment known up front — the web resource's
+      global **Environment** filter lists exactly these labels. Requires the
+      application user / service principal to have **environment-reader** access
+      across the tenant. *Omit this step (and the per-environment loop) to crawl
+      only the home environment.*
+   2. **Apply to each environment** — iterate the enumerated environments so
+      flows across the tenant are reviewed and tagged:
+      1. **Enumerate flows.** For the **home** (Dataverse) environment, `List
+         rows` on `workflows`:
+         - `$filter`: `category eq 5` (cloud flows), **plus** `and statecode eq 1`
+           (activated only) unless the active standard's **`bvr_reviewallflows`**
+           is on — when on, the `statecode` clause is dropped so draft/suspended
+           flows are reviewed too. See `steps.json` for the exact expression.
+         - `$select`: `workflowid,name,clientdata,modifiedon,statecode`;
+           `$top` ~5000, page with `@odata.nextLink`.
+
+         For **other** environments, substitute a Power Automate **Management
+         API** "list flows" call scoped to that environment id.
+      2. **Enrich — Management API.** For each flow, resolve **owner principal
+         type** and **state** (the environment comes from the enumerated
+         environment). Map `creator`/`referencedResources` to `ownerType`
+         (`user` | `application` | `team`).
+      3. **Upsert Flow Inventory** keyed on `bvr_flowid` (`workflowid`), setting
+         **`bvr_environment`** to the current environment's display name. Compute
+         `bvr_definitionhash` from `clientdata`; if unchanged since last run, mark
+         the flow reviewed-from-cache and skip the engine call.
+      4. **Apply to each flow:**
       - Call the **ReviewFlow** connector action with
         `{ displayName, clientData, inventory, ruleset, ai: true|false }`.
       - Create a **Flow Review** (`bvr_flowreview`) from `score`.

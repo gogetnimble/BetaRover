@@ -13,18 +13,27 @@
       "type": "Scope",
       "runAfter": { "Compose_Ruleset": ["Succeeded"] },
       "actions": [
-        { "name": "List_Cloud_Flows", "type": "Dataverse.ListRows", "table": "workflows", "$filter": "category eq 5@{if(first(outputs('Get_Active_Standard')?['body/value'])?['bvr_reviewallflows'], '', ' and statecode eq 1')}", "$filterNote": "Reviews only activated flows (statecode eq 1) unless the active standard's 'Review all flows' (bvr_reviewallflows) is on, in which case every cloud flow is listed.", "$select": "workflowid,name,clientdata,modifiedon,statecode", "$top": 5000, "paging": "@odata.nextLink" },
-        { "name": "Enrich_From_Management_API", "type": "HTTP", "note": "Power Automate Management API for owner principal type, environment, state." },
+        { "name": "List_Environments", "type": "HTTP", "method": "GET", "uri": "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments?api-version=2020-06-01", "note": "Enumerate tenant environments via the BAP API so every environment is known up front (not just those a flow already turned up in). Shape the response with the engine's parseEnvironments(); use environmentLabel(env) as the bvr_environment value. Needs the application user / SPN to have tenant environment-reader access. Omit this step and the loop below to crawl only the home environment." },
         {
-          "name": "Apply_to_each_flow",
+          "name": "Apply_to_each_environment",
           "type": "Foreach",
-          "foreach": "@outputs('List_Cloud_Flows')?['body/value']",
+          "foreach": "@body('List_Environments')?['value']",
+          "note": "Iterate environments so flows across the tenant are reviewed and tagged with their environment. For the home (Dataverse) environment, List_Cloud_Flows from the 'workflows' table; for other environments list flows via the Power Automate Management API for that environment id. Set bvr_environment on every inventory upsert to the current environment's display name so the web resource's Environment filter lists them.",
           "actions": [
-            { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "bvr_flowinventories", "key": "bvr_flowid" },
-            { "name": "Skip_If_Unchanged", "type": "Condition", "note": "Compare bvr_definitionhash to prior run; skip engine call if identical." },
-            { "name": "Review_Flow", "type": "CustomConnector.ReviewFlow", "body": { "displayName": "@item()?['name']", "clientData": "@item()?['clientdata']", "inventory": { "flowId": "@item()?['workflowid']", "ownerType": "@variables('ownerType')" }, "ruleset": "@outputs('Compose_Ruleset')", "ai": true } },
-            { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_score": "@body('Review_Flow')?['score/score']", "bvr_passed": "@body('Review_Flow')?['score/passed']", "bvr_failed": "@body('Review_Flow')?['score/failed']", "bvr_warnings": "@body('Review_Flow')?['score/warnings']" } },
-            { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
+            { "name": "List_Cloud_Flows", "type": "Dataverse.ListRows", "table": "workflows", "$filter": "category eq 5@{if(first(outputs('Get_Active_Standard')?['body/value'])?['bvr_reviewallflows'], '', ' and statecode eq 1')}", "$filterNote": "Reviews only activated flows (statecode eq 1) unless the active standard's 'Review all flows' (bvr_reviewallflows) is on, in which case every cloud flow is listed.", "$select": "workflowid,name,clientdata,modifiedon,statecode", "$top": 5000, "paging": "@odata.nextLink", "environmentNote": "Home environment uses the Dataverse 'workflows' table; for other environments substitute a Management API 'list flows' call scoped to @items('Apply_to_each_environment')?['name']." },
+            { "name": "Enrich_From_Management_API", "type": "HTTP", "note": "Power Automate Management API for owner principal type and state (environment comes from the enumerated environment)." },
+            {
+              "name": "Apply_to_each_flow",
+              "type": "Foreach",
+              "foreach": "@outputs('List_Cloud_Flows')?['body/value']",
+              "actions": [
+                { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "bvr_flowinventories", "key": "bvr_flowid", "fields": { "bvr_environment": "@{items('Apply_to_each_environment')?['properties/displayName']}" } },
+                { "name": "Skip_If_Unchanged", "type": "Condition", "note": "Compare bvr_definitionhash to prior run; skip engine call if identical." },
+                { "name": "Review_Flow", "type": "CustomConnector.ReviewFlow", "body": { "displayName": "@item()?['name']", "clientData": "@item()?['clientdata']", "inventory": { "flowId": "@item()?['workflowid']", "ownerType": "@variables('ownerType')", "environment": "@items('Apply_to_each_environment')?['properties/displayName']" }, "ruleset": "@outputs('Compose_Ruleset')", "ai": true } },
+                { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_score": "@body('Review_Flow')?['score/score']", "bvr_passed": "@body('Review_Flow')?['score/passed']", "bvr_failed": "@body('Review_Flow')?['score/failed']", "bvr_warnings": "@body('Review_Flow')?['score/warnings']" } },
+                { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
+              ]
+            }
           ]
         }
       ]

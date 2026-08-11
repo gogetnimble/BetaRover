@@ -1,7 +1,13 @@
 # Ember site-map icons
 
-Twelve line SVG icons for the model-driven app's site map — one per menu item,
-plus the app icon (`ember-app.svg`, the Ember flame).
+Line SVG icons for the model-driven app's site map — one per menu item, plus two
+app marks:
+
+- **`ember-logo.svg`** — the full-colour **app logo** (white flame on the dark-red
+  gradient tile). Use this as the model-driven app's **icon** (App designer →
+  Properties → Icon → Use web resource).
+- **`ember-app.svg`** — a monochrome flame (`currentColor`) for use as a site-map
+  *area* icon where a single colour is wanted.
 
 They're single-colour and use `stroke="currentColor"` / `fill="currentColor"`, so
 they inherit the menu text colour and adapt to light/dark and selection state in

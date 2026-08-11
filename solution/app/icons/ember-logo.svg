@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="Ember">
+  <defs>
+    <linearGradient id="emberG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b32717"/>
+      <stop offset="1" stop-color="#7a120c"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="11" fill="url(#emberG)"/>
+  <g transform="translate(5.25 9) scale(1.5)" fill="#fff">
+    <path d="M13.6 1.6c.7 2.6-.5 4.3-2 6-1.4 1.6-3 3.1-3 5.8a5.4 5.4 0 0 0 10.8.2c0-2.1-1-3.8-2.1-5.1-.2 1.1-.8 2-1.8 2.4.8-3-.6-5.9-1.9-9.3z"/>
+    <path d="M9 14.2c-.1 1.8 1.1 3.2 2.8 3.5-1-1-1.4-2.2-1-3.5.3-.9-.1-2-.7-2.7-.7.7-1.1 1.7-1.1 2.7z" opacity=".55"/>
+  </g>
+</svg>

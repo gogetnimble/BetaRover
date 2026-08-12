@@ -56,8 +56,11 @@ tenant. `steps.json` is a readable action-by-action contract.
          `bvr_definitionhash` from `clientdata`; if unchanged since last run, mark
          the flow reviewed-from-cache and skip the engine call.
       4. **Apply to each flow:**
-      - Call the **ReviewFlow** connector action with
-        `{ displayName, clientData, inventory, ruleset, ai: true|false }`.
+      - Call the **`bvr_ReviewFlow` Custom API** via **Dataverse → Perform an
+        unbound action** with `DisplayName`, `ClientData`, `Ruleset` and
+        `Inventory` (all strings). The review runs **in-platform** in the Ember
+        plug-in — no custom connector, no Azure. See [`../../plugin`](../../plugin).
+      - Parse the returned `Result` JSON (`@json(body('Review_Flow')?['Result'])`).
       - Create a **Flow Review** (`bvr_flowreview`) from `score`.
       - Create a **Review Finding** (`bvr_reviewfinding`) per item in `findings`.
 5. **Catch** (Scope, run after Try = `Failed, TimedOut, Skipped`):

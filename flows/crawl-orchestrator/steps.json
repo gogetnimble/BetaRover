@@ -29,9 +29,11 @@
               "actions": [
                 { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "bvr_flowinventories", "key": "bvr_flowid", "fields": { "bvr_environment": "@{items('Apply_to_each_environment')?['properties/displayName']}" } },
                 { "name": "Skip_If_Unchanged", "type": "Condition", "note": "Compare bvr_definitionhash to prior run; skip engine call if identical." },
-                { "name": "Review_Flow", "type": "CustomConnector.ReviewFlow", "body": { "displayName": "@item()?['name']", "clientData": "@item()?['clientdata']", "inventory": { "flowId": "@item()?['workflowid']", "ownerType": "@variables('ownerType')", "environment": "@items('Apply_to_each_environment')?['properties/displayName']" }, "ruleset": "@outputs('Compose_Ruleset')", "ai": true } },
-                { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_score": "@body('Review_Flow')?['score/score']", "bvr_passed": "@body('Review_Flow')?['score/passed']", "bvr_failed": "@body('Review_Flow')?['score/failed']", "bvr_warnings": "@body('Review_Flow')?['score/warnings']" } },
-                { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
+                { "name": "Compose_Inventory", "type": "Compose", "inputs": { "flowId": "@item()?['workflowid']", "ownerType": "@variables('ownerType')", "environment": "@items('Apply_to_each_environment')?['properties/displayName']" } },
+                { "name": "Review_Flow", "type": "Dataverse.PerformUnboundAction", "action": "bvr_ReviewFlow", "parameters": { "DisplayName": "@item()?['name']", "ClientData": "@item()?['clientdata']", "Ruleset": "@string(outputs('Compose_Ruleset'))", "Inventory": "@string(outputs('Compose_Inventory'))" }, "note": "Ember review Custom API (Dataverse plug-in) — replaces the custom connector; the review runs in-platform, no external hosting. Result is a JSON string in body('Review_Flow')?['Result']." },
+                { "name": "Parse_Review", "type": "Compose", "inputs": "@json(body('Review_Flow')?['Result'])", "note": "Parse the Result JSON once, then read score/findings from it." },
+                { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_score": "@outputs('Parse_Review')?['score/score']", "bvr_passed": "@outputs('Parse_Review')?['score/passed']", "bvr_failed": "@outputs('Parse_Review')?['score/failed']", "bvr_warnings": "@outputs('Parse_Review')?['score/warnings']" } },
+                { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@outputs('Parse_Review')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
               ]
             }
           ]

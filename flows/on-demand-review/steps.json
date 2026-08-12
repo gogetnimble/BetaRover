@@ -22,9 +22,11 @@
         { "name": "Get_Target_Flow", "type": "Dataverse.GetRow", "table": "workflows", "id": "@triggerOutputs()?['body/bvr_targetflowid']", "$select": "workflowid,name,clientdata,modifiedon", "note": "Single flow — no paging. category is implicitly 5 for the targeted cloud flow." },
         { "name": "Enrich_From_Management_API", "type": "HTTP", "note": "Power Automate Management API for owner principal type, environment, state." },
         { "name": "Upsert_Flow_Inventory", "type": "Dataverse.UpsertRow", "table": "bvr_flowinventories", "key": "bvr_flowid" },
-        { "name": "Review_Flow", "type": "CustomConnector.ReviewFlow", "body": { "displayName": "@body('Get_Target_Flow')?['name']", "clientData": "@body('Get_Target_Flow')?['clientdata']", "inventory": { "flowId": "@body('Get_Target_Flow')?['workflowid']", "ownerType": "@variables('ownerType')" }, "ruleset": "@outputs('Compose_Ruleset')", "ai": true } },
-        { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_runid": "@triggerOutputs()?['body/bvr_reviewrunid']", "bvr_score": "@body('Review_Flow')?['score/score']", "bvr_passed": "@body('Review_Flow')?['score/passed']", "bvr_failed": "@body('Review_Flow')?['score/failed']", "bvr_warnings": "@body('Review_Flow')?['score/warnings']" } },
-        { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@body('Review_Flow')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
+        { "name": "Compose_Inventory", "type": "Compose", "inputs": { "flowId": "@body('Get_Target_Flow')?['workflowid']", "ownerType": "@variables('ownerType')" } },
+        { "name": "Review_Flow", "type": "Dataverse.PerformUnboundAction", "action": "bvr_ReviewFlow", "parameters": { "DisplayName": "@body('Get_Target_Flow')?['name']", "ClientData": "@body('Get_Target_Flow')?['clientdata']", "Ruleset": "@string(outputs('Compose_Ruleset'))", "Inventory": "@string(outputs('Compose_Inventory'))" }, "note": "Ember review Custom API (Dataverse plug-in) — no custom connector. Result is a JSON string in body('Review_Flow')?['Result']." },
+        { "name": "Parse_Review", "type": "Compose", "inputs": "@json(body('Review_Flow')?['Result'])" },
+        { "name": "Create_Flow_Review", "type": "Dataverse.CreateRow", "table": "bvr_flowreviews", "fields": { "bvr_runid": "@triggerOutputs()?['body/bvr_reviewrunid']", "bvr_score": "@outputs('Parse_Review')?['score/score']", "bvr_passed": "@outputs('Parse_Review')?['score/passed']", "bvr_failed": "@outputs('Parse_Review')?['score/failed']", "bvr_warnings": "@outputs('Parse_Review')?['score/warnings']" } },
+        { "name": "Apply_to_each_finding", "type": "Foreach", "foreach": "@outputs('Parse_Review')?['findings']", "actions": [ { "name": "Create_Finding", "type": "Dataverse.CreateRow", "table": "bvr_reviewfindings" } ] }
       ]
     },
     {
@@ -41,7 +43,7 @@
       "type": "Scope",
       "runAfter": { "Catch": ["Succeeded", "Failed", "TimedOut", "Skipped"] },
       "actions": [
-        { "name": "Finalize_Run", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "id": "@triggerOutputs()?['body/bvr_reviewrunid']", "fields": { "bvr_completedon": "@{utcNow()}", "bvr_flowsscanned": 1, "bvr_findingscount": "@length(body('Review_Flow')?['findings'])", "bvr_averagescore": "@body('Review_Flow')?['score/score']", "bvr_status": "Completed" } }
+        { "name": "Finalize_Run", "type": "Dataverse.UpdateRow", "table": "bvr_reviewruns", "id": "@triggerOutputs()?['body/bvr_reviewrunid']", "fields": { "bvr_completedon": "@{utcNow()}", "bvr_flowsscanned": 1, "bvr_findingscount": "@length(outputs('Parse_Review')?['findings'])", "bvr_averagescore": "@outputs('Parse_Review')?['score/score']", "bvr_status": "Completed" } }
       ]
     }
   ]

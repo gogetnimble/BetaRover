@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Dataverse plug-in assembly for Ember. Targets .NET Framework 4.6.2 (the plug-in
+    sandbox runtime) and is strong-named (required to register). It has NO external
+    runtime dependencies — the JSON parser is hand-rolled — so the single signed DLL
+    is all that ships in the solution.
+
+    Build (cross-platform, needs the .NET SDK):
+      dotnet build plugin/Ember.Plugins/Ember.Plugins.csproj -c Release
+    Output: bin/Release/net462/Ember.Plugins.dll  (register this).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <AssemblyName>Ember.Plugins</AssemblyName>
+    <RootNamespace>Ember.Plugins</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>Ember.Plugins.snk</AssemblyOriginatorKeyFile>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.Xrm.Sdk (IPlugin, IPluginExecutionContext, …) -->
+    <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.51" />
+    <!-- lets net462 build on a machine without the .NET Framework targeting pack installed -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

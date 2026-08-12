@@ -57,5 +57,6 @@ Follows the same **Try / Catch / Finally** pattern the standard mandates:
 ## Build order
 
 Build this **after** the Crawl Orchestrator (they share the connections, the
-custom connector, and — ideally — the child flow). See
-[`docs/deployment.md`](../../docs/deployment.md) step 6.
+**`bvr_ReviewFlow` Custom API** — see [`../../plugin`](../../plugin) — and,
+ideally, the child flow). See [`docs/deployment.md`](../../docs/deployment.md)
+step 6.

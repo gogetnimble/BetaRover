@@ -13,8 +13,8 @@ At a glance:
 | 1 | Prerequisites | — |
 | 2 | Create the Dataverse tables | [`solution/schema/tables.json`](../solution/schema/tables.json) |
 | 3 | Seed the standard + rules | [`solution/seed/default-ruleset.json`](../solution/seed/default-ruleset.json) |
-| 4 | Deploy the engine (Azure Function) | [`engine/`](../engine) |
-| 5 | Import the custom connector | [`connector/`](../connector) |
+| 4 | Build + register the review engine plug-in (Custom API `bvr_ReviewFlow`) | [`plugin/`](../plugin) |
+| 5 | *(legacy)* Azure Function + custom connector — superseded by step 4 | [`connector/`](../connector) |
 | 6 | Build the two crawl flows | [`flows/`](../flows) |
 | 7 | Build the model-driven app + web resource | [`webresource/`](../webresource) |
 | 8 | Security roles | — |
@@ -82,37 +82,35 @@ Then **edit the rows** for your tenant — prefix, approved senders, logger name
 via the app's Standard & Rules tab or directly. That data-driven edit *is* the
 point of the design: no redeploy to change a threshold.
 
-## 4. Deploy the engine (Azure Function)
+## 4. Build + register the review engine plug-in (Custom API)
+
+The review engine runs **inside Dataverse** as a plug-in exposed as the
+**`bvr_ReviewFlow` Custom API**, so it ships in the one solution — no Azure, no
+custom connector. Full steps are in [`plugin/README.md`](../plugin/README.md):
 
 ```bash
-cd engine
-npm ci
-npm test          # gate: all tests must be green
-npm run build     # emits dist/
+sn -k plugin/Ember.Plugins/Ember.Plugins.snk                       # signing key (once)
+dotnet build plugin/Ember.Plugins/Ember.Plugins.csproj -c Release  # → Ember.Plugins.dll
 ```
 
-Host `dist/` behind a Node Azure Function (v4 model) using the thin wrapper in
-[`engine/host/README.md`](../engine/host/README.md). Set these app settings if
-you want the AI pass (omit to disable it):
+Then, with the Plugin Registration Tool / `pac`: register the (sandboxed,
+database) assembly, create the **Custom API** `bvr_ReviewFlow` bound to
+`Ember.Plugins.Plugins.ReviewFlowPlugin` with request params `DisplayName`,
+`ClientData`, `Ruleset`, `Inventory` (all String) and response `Result` (String),
+and **add the assembly + Custom API to the Ember solution** so they import with it.
 
-| Setting | Purpose |
-|---------|---------|
-| `AZURE_OPENAI_ENDPOINT` | e.g. `https://my-aoai.openai.azure.com` |
-| `AZURE_OPENAI_KEY` | Azure OpenAI key |
-| `AZURE_OPENAI_DEPLOYMENT` | chat deployment, e.g. `gpt-4o` |
+The C# engine is a faithful port of [`engine/`](../engine) (the TypeScript stays
+the spec + vitest suite). The AI pass is optional and, if used, is an HTTP call to
+*the client's* Azure OpenAI from the flow — no engine-hosted secrets.
 
-Keep secrets in Function app settings / Key Vault. The connector authenticates
-with the Function key (`x-functions-key`).
+## 5. *(legacy)* Azure Function + custom connector
 
-## 5. Import the custom connector
-
-Import [`connector/flow-review-connector.swagger.json`](../connector/flow-review-connector.swagger.json),
-set `host` to your Function app, and create a connection using the Function key.
-It exposes `POST /api/review` as the **Review Flow** action.
+Superseded by step 4. Only relevant if you deliberately host the engine outside
+Dataverse — see [`connector/README.md`](../connector/README.md). Skip otherwise.
 
 ## 6. Build the two crawl flows
 
-Both share connections, the custom connector, and — recommended — a child flow
+Both share connections, the **`bvr_ReviewFlow` Custom API**, and — recommended — a child flow
 `BR - Flow Review - Review One Flow` that does one flow's review (see the
 on-demand README).
 

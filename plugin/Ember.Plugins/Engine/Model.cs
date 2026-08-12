@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Ember.Plugins.Engine
+namespace BetaRover.Ember.Engine
 {
     /// <summary>
     /// POCOs mirroring engine/src/types.ts. Severity and status are kept as strings

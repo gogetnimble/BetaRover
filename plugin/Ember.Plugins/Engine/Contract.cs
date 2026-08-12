@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using Ember.Plugins.Json;
+using BetaRover.Ember.Json;
 
-namespace Ember.Plugins.Engine
+namespace BetaRover.Ember.Engine
 {
     /// <summary>Maps the Custom API's JSON request/response to/from engine types.</summary>
     public static class Contract

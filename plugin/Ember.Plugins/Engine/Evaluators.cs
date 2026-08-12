@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Ember.Plugins.Json;
+using BetaRover.Ember.Json;
 
-namespace Ember.Plugins.Engine
+namespace BetaRover.Ember.Engine
 {
     /// <summary>Port of engine/src/rules/helpers.ts + evaluators.ts.</summary>
     public static class Evaluators

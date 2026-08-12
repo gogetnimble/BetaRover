@@ -95,7 +95,7 @@ dotnet build plugin/Ember.Plugins/Ember.Plugins.csproj -c Release  # → Ember.P
 
 Then, with the Plugin Registration Tool / `pac`: register the (sandboxed,
 database) assembly, create the **Custom API** `bvr_ReviewFlow` bound to
-`Ember.Plugins.Plugins.ReviewFlowPlugin` with request params `DisplayName`,
+`BetaRover.Ember.Plugins.ReviewFlowPlugin` with request params `DisplayName`,
 `ClientData`, `Ruleset`, `Inventory` (all String) and response `Result` (String),
 and **add the assembly + Custom API to the Ember solution** so they import with it.
 

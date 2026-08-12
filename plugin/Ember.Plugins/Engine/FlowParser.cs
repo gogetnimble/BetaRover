@@ -1,7 +1,7 @@
 using System.Collections.Generic;
-using Ember.Plugins.Json;
+using BetaRover.Ember.Json;
 
-namespace Ember.Plugins.Engine
+namespace BetaRover.Ember.Engine
 {
     /// <summary>Port of engine/src/flowModel.ts — parses clientdata into a FlowModel.</summary>
     public static class FlowParser

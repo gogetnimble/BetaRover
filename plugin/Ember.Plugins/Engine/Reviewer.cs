@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Ember.Plugins.Engine
+namespace BetaRover.Ember.Engine
 {
     /// <summary>Port of engine/src/reviewer.ts — deterministic review + scoring.
     /// The AI pass is intentionally omitted here; if wanted, the calling flow makes

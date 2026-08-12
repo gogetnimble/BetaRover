@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
-namespace Ember.Plugins.Json
+namespace BetaRover.Ember.Json
 {
     /// <summary>
     /// A tiny, dependency-free JSON parser + serializer. Dataverse plug-ins run in

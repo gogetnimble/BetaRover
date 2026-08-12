@@ -45,7 +45,7 @@ Use the **Plugin Registration Tool** (`pac tool prt`) or `pac plugin`:
    - **Unique Name** `bvr_ReviewFlow`, **Binding Type** = Global (unbound),
      **Is Function** = No, **Enabled for Workflow** = No, **Allowed Custom
      Processing Step Type** = None.
-   - **Plugin Type** = `Ember.Plugins.Plugins.ReviewFlowPlugin`.
+   - **Plugin Type** = `BetaRover.Ember.Plugins.ReviewFlowPlugin`.
    - **Request parameters** (all **String**):
 
      | Name | Unique name | Optional |

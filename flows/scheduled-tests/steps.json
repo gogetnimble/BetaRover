@@ -1,0 +1,53 @@
+{
+  "$comment": "Readable action-by-action contract for the nightly server-side unit-test flow. NOT a direct import artifact — connection references and environment IDs are tenant-specific. Rebuild in the maker portal following flows/scheduled-tests/README.md. Mirrors the in-browser 'Run tests' button, but runs every flow's enabled test cases on a schedule via the bvr_RunFlowTests Custom API (the mock runner as a Dataverse plug-in).",
+  "flowName": "BR - Flow Review - Scheduled Unit Tests",
+  "trigger": { "kind": "Recurrence", "frequency": "Day", "interval": 1, "at": "02:00", "note": "Runs before the 06:00 crawl so the dashboard's unit-test health is fresh each morning. No overlap with the review crawl." },
+  "actions": [
+    { "name": "Initialize_LogSource", "type": "InitializeVariable", "value": "BR - Flow Review - Scheduled Unit Tests" },
+    {
+      "name": "Try",
+      "type": "Scope",
+      "actions": [
+        { "name": "Get_Flows_With_Tests", "type": "Dataverse.ListRows", "table": "bvr_flowinventories", "$filter": "bvr_testcasecount gt 0", "$select": "bvr_flowinventoryid,bvr_flowid,bvr_name", "$top": 5000, "paging": "@odata.nextLink", "note": "Only flows that actually have unit-test cases. bvr_testcasecount is maintained by the New test case / guided builder path in the web resource." },
+        {
+          "name": "Apply_to_each_flow",
+          "type": "Foreach",
+          "foreach": "@outputs('Get_Flows_With_Tests')?['body/value']",
+          "actions": [
+            { "name": "Get_Flow_Definition", "type": "Dataverse.GetRow", "table": "workflows", "id": "@items('Apply_to_each_flow')?['bvr_flowid']", "$select": "workflowid,name,clientdata", "note": "The flow's live clientdata (WDL definition) is the input the mock runner interprets. For flows in other environments, substitute a Management API 'get flow' call for that environment id." },
+            { "name": "Get_Test_Cases_For_Flow", "type": "Dataverse.ListRows", "table": "bvr_flowtestcases", "$filter": "_bvr_flowinventoryid_value eq @{items('Apply_to_each_flow')?['bvr_flowinventoryid']} and bvr_enabled eq true", "$select": "bvr_name,bvr_casejson", "note": "Enabled cases for this flow. bvr_casejson is one TestCase { name, trigger, mocks, variables, asserts }." },
+            { "name": "Select_Cases", "type": "Select", "from": "@outputs('Get_Test_Cases_For_Flow')?['body/value']", "map": "@json(item()?['bvr_casejson'])", "note": "Parse each stored case JSON into the array the Custom API expects. Map value is the raw expression json(item()?['bvr_casejson']) (switch the Select map to text mode)." },
+            {
+              "name": "Run_Case_Check",
+              "type": "If",
+              "expression": { "greater": ["@length(body('Select_Cases'))", 0] },
+              "note": "Skip flows whose cases were all disabled between the count check and now.",
+              "actions": {
+                "Run_Tests": { "type": "Dataverse.PerformUnboundAction", "action": "bvr_RunFlowTests", "parameters": { "DisplayName": "@items('Apply_to_each_flow')?['bvr_name']", "ClientData": "@body('Get_Flow_Definition')?['clientdata']", "TestCases": "@string(body('Select_Cases'))" }, "note": "Ember mock-runner Custom API (Dataverse plug-in) — same engine as the in-browser Run tests. Result is a JSON string in body('Run_Tests')?['Result']: { passed, total, passedCount, results:[...] }.", "runAfter": {} },
+                "Parse_Result": { "type": "Compose", "inputs": "@json(body('Run_Tests')?['Result'])", "runAfter": { "Run_Tests": ["Succeeded"] } },
+                "Create_Test_Run": { "type": "Dataverse.CreateRow", "table": "bvr_flowtestruns", "fields": { "bvr_name": "Nightly tests · @{items('Apply_to_each_flow')?['bvr_name']} · @{utcNow()}", "bvr_flowinventoryid": "@items('Apply_to_each_flow')?['bvr_flowinventoryid']", "bvr_status": "@if(outputs('Parse_Result')?['passed'], 'passed', 'failed')", "bvr_passed": "@outputs('Parse_Result')?['passedCount']", "bvr_failed": "@sub(outputs('Parse_Result')?['total'], outputs('Parse_Result')?['passedCount'])", "bvr_ranon": "@{utcNow()}", "bvr_resultjson": "@string(outputs('Parse_Result')?['results'])" }, "note": "One bvr_flowtestrun per flow per night. bvr_status choice is passed/failed/error — map to your published option values.", "runAfter": { "Parse_Result": ["Succeeded"] } },
+                "Stamp_Flow_When_Passed": { "type": "If", "expression": { "equals": ["@outputs('Parse_Result')?['passed']", true] }, "note": "Mirror the web resource: stamp bvr_lasttestpassedon on the flow when every case passed, so the dashboard's 'Last test pass' is accurate.", "actions": { "Update_Flow_Inventory": { "type": "Dataverse.UpdateRow", "table": "bvr_flowinventories", "id": "@items('Apply_to_each_flow')?['bvr_flowinventoryid']", "fields": { "bvr_lasttestpassedon": "@{utcNow()}" }, "runAfter": {} } }, "runAfter": { "Create_Test_Run": ["Succeeded"] } }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catch",
+      "type": "Scope",
+      "runAfter": { "Try": ["Failed", "TimedOut", "Skipped"] },
+      "actions": [
+        { "name": "Log_Error", "type": "ChildFlow", "body": { "Level": "Error", "Source": "@variables('LogSource')", "EventDetail": "@string(result('Try'))" }, "note": "Same shared logger child flow the crawl uses. A single flow's test failure does not fail the run — only an unexpected error (bad clientdata, API throttle) lands here." }
+      ]
+    },
+    {
+      "name": "Finally",
+      "type": "Scope",
+      "runAfter": { "Catch": ["Succeeded", "Failed", "TimedOut", "Skipped"] },
+      "actions": [
+        { "name": "Noop", "type": "Compose", "inputs": "Scheduled unit-test run complete." }
+      ]
+    }
+  ]
+}

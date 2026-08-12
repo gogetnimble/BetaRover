@@ -1,8 +1,12 @@
 /**
- * Parity check: the web resource ships a hand-port of this runner (inline JS in
- * webresource/bvr_flowreview_app.html, `EmberRunner`). This test runs the exact
- * sample flow + cases the web resource's demo uses through the real TS runner, so
- * a divergence between the port and the engine fails CI.
+ * Parity check for the two hand-ports of this runner:
+ *   - the web resource (inline JS in webresource/bvr_flowreview_app.html,
+ *     `EmberRunner`, behind the **Run tests** button), and
+ *   - the Dataverse plug-in (C# in plugin/Ember.Plugins/Testing, the
+ *     `bvr_RunFlowTests` Custom API, behind the nightly Scheduled Unit Tests flow).
+ * This runs the exact sample flow + cases both ports demo through the real TS
+ * runner, so a divergence between a port and the engine fails CI. The C# port is
+ * line-faithful to runner.ts / expr.ts; keep all three in step.
  */
 import { describe, it, expect } from 'vitest';
 import type { FlowModel } from '../../src/types.js';

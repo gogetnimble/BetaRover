@@ -13,9 +13,9 @@ At a glance:
 | 1 | Prerequisites | — |
 | 2 | Create the Dataverse tables | [`solution/schema/tables.json`](../solution/schema/tables.json) |
 | 3 | Seed the standard + rules | [`solution/seed/default-ruleset.json`](../solution/seed/default-ruleset.json) |
-| 4 | Build + register the review engine plug-in (Custom API `bvr_ReviewFlow`) | [`plugin/`](../plugin) |
+| 4 | Build + register the plug-in (Custom APIs `bvr_ReviewFlow` + `bvr_RunFlowTests`) | [`plugin/`](../plugin) |
 | 5 | *(legacy)* Azure Function + custom connector — superseded by step 4 | [`connector/`](../connector) |
-| 6 | Build the two crawl flows | [`flows/`](../flows) |
+| 6 | Build the crawl + unit-test flows | [`flows/`](../flows) |
 | 7 | Build the model-driven app + web resource | [`webresource/`](../webresource) |
 | 8 | Security roles | — |
 | 9 | Verify | — |
@@ -82,11 +82,12 @@ Then **edit the rows** for your tenant — prefix, approved senders, logger name
 via the app's Standard & Rules tab or directly. That data-driven edit *is* the
 point of the design: no redeploy to change a threshold.
 
-## 4. Build + register the review engine plug-in (Custom API)
+## 4. Build + register the plug-in (two Custom APIs)
 
-The review engine runs **inside Dataverse** as a plug-in exposed as the
-**`bvr_ReviewFlow` Custom API**, so it ships in the one solution — no Azure, no
-custom connector. Full steps are in [`plugin/README.md`](../plugin/README.md):
+The review engine **and** the flow unit-test runner run **inside Dataverse** as
+plug-ins in **one signed assembly**, exposed as two **Custom APIs** — so they
+ship in the one solution, no Azure, no custom connector. Full steps are in
+[`plugin/README.md`](../plugin/README.md):
 
 ```bash
 sn -k plugin/Ember.Plugins/Ember.Plugins.snk                       # signing key (once)
@@ -94,37 +95,50 @@ dotnet build plugin/Ember.Plugins/Ember.Plugins.csproj -c Release  # → Ember.P
 ```
 
 Then, with the Plugin Registration Tool / `pac`: register the (sandboxed,
-database) assembly, create the **Custom API** `bvr_ReviewFlow` bound to
-`BetaRover.Ember.Plugins.ReviewFlowPlugin` with request params `DisplayName`,
-`ClientData`, `Ruleset`, `Inventory` (all String) and response `Result` (String),
-and **add the assembly + Custom API to the Ember solution** so they import with it.
+database) assembly, then create **both** Custom APIs and **add the assembly +
+both Custom APIs to the Ember solution** so they import with it:
 
-The C# engine is a faithful port of [`engine/`](../engine) (the TypeScript stays
-the spec + vitest suite). The AI pass is optional and, if used, is an HTTP call to
-*the client's* Azure OpenAI from the flow — no engine-hosted secrets.
+- **`bvr_ReviewFlow`** → plugin type `BetaRover.Ember.Plugins.ReviewFlowPlugin`,
+  request params `DisplayName`, `ClientData`, `Ruleset`, `Inventory` (String),
+  response `Result` (String). Reviews one flow against the ruleset.
+- **`bvr_RunFlowTests`** → plugin type `BetaRover.Ember.Plugins.RunFlowTestsPlugin`,
+  request params `DisplayName`, `ClientData`, `TestCases` (String), response
+  `Result` (String). Mock-executes a flow's unit tests server-side (the same
+  engine as the web resource's **Run tests** button).
+
+The C# is a faithful port of [`engine/`](../engine) — the review engine and the
+`engine/src/testing` mock runner (the TypeScript stays the spec + vitest suite).
+The AI pass is optional and, if used, is an HTTP call to *the client's* Azure
+OpenAI from the flow — no engine-hosted secrets.
 
 ## 5. *(legacy)* Azure Function + custom connector
 
 Superseded by step 4. Only relevant if you deliberately host the engine outside
 Dataverse — see [`connector/README.md`](../connector/README.md). Skip otherwise.
 
-## 6. Build the two crawl flows
+## 6. Build the crawl + unit-test flows
 
-Both share connections, the **`bvr_ReviewFlow` Custom API**, and — recommended — a child flow
+They share connections, the Custom APIs, and — recommended — a child flow
 `BR - Flow Review - Review One Flow` that does one flow's review (see the
 on-demand README).
 
 - **`BR - Flow Review - Crawl Orchestrator`** (nightly) —
   [`flows/crawl-orchestrator`](../flows/crawl-orchestrator/README.md). Recurrence
-  trigger; enumerates all cloud flows and reviews each. Run once on demand before
-  enabling the schedule.
+  trigger; enumerates all cloud flows and reviews each via **`bvr_ReviewFlow`**.
+  Run once on demand before enabling the schedule.
 - **`BR - Flow Review - On-Demand`** (single flow) —
   [`flows/on-demand-review`](../flows/on-demand-review/README.md). **Dataverse
   "When a row is added"** on `bvr_reviewruns`, filtered to
   `bvr_triggersource eq <ondemand value>`. Fires when the web resource's **Run
   review now** button creates a queued run.
+- **`BR - Flow Review - Scheduled Unit Tests`** (nightly) —
+  [`flows/scheduled-tests`](../flows/scheduled-tests/README.md). Recurrence
+  trigger; runs every flow's enabled test cases through **`bvr_RunFlowTests`**
+  and writes `bvr_flowtestrun` rows + stamps `bvr_lasttestpassedon`. The
+  server-side twin of the web resource's **Run tests** button, feeding the
+  dashboard's unit-test health KPIs.
 
-Both follow Try/Catch/Finally, logging, and bounded queries — the very standard
+All follow Try/Catch/Finally, logging, and bounded queries — the very standard
 they enforce.
 
 ## 7. Build the model-driven app + site map
